@@ -125,5 +125,9 @@
   "tr.wasFor": "Written for: {text}",
   "tr.more": "Show more ({count})",
   "editor.filters": "Filters",
-  "editor.filtersActive": "Filters ({count} on)"
+  "editor.filtersActive": "Filters ({count} on)",
+  "editor.view": "View",
+  "editor.viewList": "List",
+  "editor.viewCards": "Cards",
+  "editor.edit": "Edit"
 }

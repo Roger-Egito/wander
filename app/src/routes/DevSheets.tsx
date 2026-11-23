@@ -5,19 +5,17 @@
  * skill, so the sheet ends as it started, except that the Rascunho ID counter moves up
  * by one.
  */
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { Tables } from '@wander/content';
-import { SheetsAdapter } from '../adapters/sheets/adapter.ts';
-import { googleSheetsToken } from '../adapters/sheets/googleToken.ts';
-import { googleSheetsTransport } from '../adapters/sheets/transport.ts';
-import { GOOGLE_CLIENT_ID, WANDER_DATA_ID } from '../config.ts';
+import { sheetsAdapter, sheetsToken, sheetsTransport } from '../adapters/sheets/session.ts';
 
 type Line = { ok: boolean; text: string };
 
 export function DevSheets() {
-  const token = useMemo(() => googleSheetsToken(GOOGLE_CLIENT_ID), []);
-  const transport = useMemo(() => googleSheetsTransport(WANDER_DATA_ID, token.get), [token]);
-  const adapter = useMemo(() => new SheetsAdapter(transport), [transport]);
+  // The same connection as the Editor: connecting on either page connects both.
+  const token = sheetsToken;
+  const transport = sheetsTransport;
+  const adapter = sheetsAdapter;
   const [lines, setLines] = useState<Line[]>([]);
   const [running, setRunning] = useState(false);
   const log = (ok: boolean, text: string) => setLines((all) => [...all, { ok, text }]);

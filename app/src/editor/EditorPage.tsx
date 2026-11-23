@@ -18,15 +18,28 @@ import type { CellValue } from '../adapters/sheets/transport.ts';
 import { EditorDataProvider, useEditorData } from './EditorData.tsx';
 import { changedValues, childrenChanged, draftFrom, emptyDraft, isDirty, mergeDraft, PENDING_ID, problemsFor, typeById, type Draft } from './draft.ts';
 import { BulkBar } from './bulk.tsx';
+import { CardsView } from './CardsView.tsx';
+import { filterRows, NO_FILTERS, type Filters } from './filters.ts';
+import { ListTools } from './ListTools.tsx';
 import { keywordCandidates } from './keywordCandidates.ts';
 import { PublishButton } from './publish.tsx';
 import { TranslationScreen } from './TranslationScreen.tsx';
-import { ChildrenEditor, EnglishInput, FieldInput, optionsFor } from './fields.tsx';
+import { ChildrenEditor, EnglishInput, FieldInput } from './fields.tsx';
 import styles from './editor.module.css';
 
 const TYPES = CONTENT_TYPES as readonly ContentType[];
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value).trim());
-const fold = (value: unknown) => text(value).normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+type View = 'list' | 'cards';
+const VIEW_KEY = 'wander-editor-view';
+/** The view picked last time in this browser, else the list. */
+const savedView = (): View => {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'list';
+  } catch {
+    return 'list';
+  }
+};
+
 /** Today in the browser's time zone, as Sheets dates are written (2026-11-22). */
 const today = () => new Date().toLocaleDateString('sv-SE');
 
@@ -69,6 +82,16 @@ function Workspace({ tables }: { tables: Tables }) {
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'idle' });
   const [pane, setPane] = useState<Pane>('list');
   const [screen, setScreen] = useState<'type' | 'translations'>('type');
+  const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [view, setView] = useState<View>(savedView);
+  const chooseView = (next: View) => {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      // Not remembered, but the switch still happens.
+    }
+  };
   const type = typeById(typeId);
   /** Edits that would be lost: what the leave warning asks about. */
   const changed = !!saved && !!draft && isDirty(saved, draft);
@@ -92,10 +115,23 @@ function Workspace({ tables }: { tables: Tables }) {
     setPane('edit');
   };
   const select = (id: string) => leave() && open(draftFrom(type, tables, id));
+  /** From the Cards view: open the row in the editing layout. */
+  const openFromCards = (id: string) => {
+    if (!leave()) return;
+    open(draftFrom(type, tables, id));
+    setView('list');
+  };
+  /** From the Cards view: a new row, in the editing layout. */
+  const createFromCards = () => {
+    if (!leave()) return;
+    open(emptyDraft(type));
+    setView('list');
+  };
   const create = (defaults = {}) => leave() && open(emptyDraft(type, defaults));
   const switchType = (id: string) => {
     if (!leave()) return;
     setScreen('type');
+    setFilters(NO_FILTERS);
     setTypeId(id);
     setSaved(null);
     setDraft(null);
@@ -174,15 +210,25 @@ function Workspace({ tables }: { tables: Tables }) {
             {t('editor.translations')}
           </button>
         </div>
+        {screen === 'type' && (
+          <div className={styles.viewToggle} role="group" aria-label={t('editor.view')}>
+            {(['list', 'cards'] as View[]).map((v) => (
+              <button key={v} type="button" aria-pressed={view === v} onClick={() => chooseView(v)}>{t(v === 'list' ? 'editor.viewList' : 'editor.viewCards')}</button>
+            ))}
+          </div>
+        )}
         <PublishButton tables={tables} />
-        {screen === 'type' && <div className={styles.saveBar}>
+        {/* In the Cards view, Save shows only when a draft is waiting to be saved. */}
+        {screen === 'type' && (view === 'list' || dirty) && <div className={styles.saveBar}>
           <span className={styles.status} data-kind={saveState.kind === 'error' ? 'error' : dirty ? 'dirty' : 'clean'} role="status">{status}</span>
           {dirty && <button type="button" className={styles.secondary} onClick={() => saved && setDraft(structuredClone(saved))}>{t('editor.discard')}</button>}
           <button type="button" className={styles.primary} onClick={save} disabled={!dirty || saveState.kind === 'saving'}>{t('editor.save')}</button>
         </div>}
       </div>
 
-      {screen === 'translations' ? <TranslationScreen tables={tables} /> : <>
+      {screen === 'translations' ? <TranslationScreen tables={tables} /> : view === 'cards' ? (
+        <CardsView type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} onOpen={openFromCards} onCreate={createFromCards} />
+      ) : <>
 
       <nav className={styles.paneTabs} aria-label="panes">
         {(['list', 'edit', 'preview'] as Pane[]).map((p) => (
@@ -194,7 +240,7 @@ function Workspace({ tables }: { tables: Tables }) {
 
       <div className={styles.panes} data-pane={pane}>
         <section className={styles.listPane} aria-label={t('editor.tabList')}>
-          <List key={type.id} type={type} tables={tables} problems={allProblems} selected={text(draft?.values.id)} onSelect={select} onCreate={create} onBulkDone={afterBulk} />
+          <List key={type.id} type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} selected={text(draft?.values.id)} onSelect={select} onCreate={create} onBulkDone={afterBulk} />
         </section>
         <section className={styles.formPane} aria-label={t('editor.tabEdit')}>
           {draft ? <Form type={type} tables={tables} draft={draft} problems={problems} onChange={setDraft} isNew={saved?.values.id === PENDING_ID} /> : <p className={styles.empty}>{t('editor.noSelection')}</p>}
@@ -210,24 +256,19 @@ function Workspace({ tables }: { tables: Tables }) {
 
 /* --- list ------------------------------------------------------------------------ */
 
-function List({ type, tables, problems, selected, onSelect, onCreate, onBulkDone }: {
+function List({ type, tables, problems, filters, onFilters, selected, onSelect, onCreate, onBulkDone }: {
   type: ContentType;
   tables: Tables;
   problems: Problem[];
+  filters: Filters;
+  onFilters: (filters: Filters) => void;
   selected: string;
   onSelect: (id: string) => void;
   onCreate: (defaults?: RowValues) => void;
   onBulkDone: (ids: string[], fresh: Tables | null, removed: boolean) => void;
 }) {
-  const { language, t } = useLanguage();
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [source, setSource] = useState('');
-  const [discipline, setDiscipline] = useState('');
-  const [trash, setTrash] = useState(false);
-  // Open on wide screens, folded on a phone, where the list matters more than the filters.
-  const [filtersOpen, setFiltersOpen] = useState(() => typeof matchMedia === 'undefined' || matchMedia('(min-width: 901px)').matches);
-  const active = [discipline, status, source].filter(Boolean).length;
+  const { t } = useLanguage();
+  const { trash } = filters;
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const toggle = (id: string) => setChecked((all) => {
     const next = new Set(all);
@@ -236,51 +277,20 @@ function List({ type, tables, problems, selected, onSelect, onCreate, onBulkDone
     return next;
   });
   const has = (key: string) => type.fields.some((f) => f.key === key);
-  const field = (key: string) => type.fields.find((f) => f.key === key) as Field;
+  // A selection doesn't carry over between the live rows and the Trash.
+  useEffect(() => setChecked(new Set()), [trash]);
   const counts = useMemo(() => {
     const byId = new Map<string, number>();
     for (const p of problems) byId.set(p.id, (byId.get(p.id) ?? 0) + 1);
     return byId;
   }, [problems]);
 
-  const rows = tables[type.tab].filter((r) => {
-    if (!text(r.id)) return false;
-    if (has('status') && (r.status === 'deleted') !== trash) return false;
-    if (status && r.status !== status) return false;
-    if (source && r.source !== source) return false;
-    if (discipline && r.discipline_id !== discipline) return false;
-    const q = fold(search);
-    return !q || fold(r.id).includes(q) || fold(r[type.nameKey]).includes(q);
-  });
-
-  const filter = (key: string, value: string, set: (v: string) => void, all: string) => (
-    <select className={styles.input} value={value} onChange={(e) => set(e.target.value)} aria-label={field(key).label[language]}>
-      <option value="">{all}</option>
-      {(optionsFor(field(key), tables) ?? []).filter((o) => o.value !== 'deleted').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
+  const rows = filterRows(type, tables, filters);
 
   return (
     <div className={styles.list}>
       <div className={styles.listTools}>
-        <input className={styles.input} type="search" placeholder={t('editor.search')} value={search} onChange={(e) => setSearch(e.target.value)} />
-        <details className={styles.filterBox} open={filtersOpen} onToggle={(e) => setFiltersOpen(e.currentTarget.open)}>
-          <summary>{active ? t('editor.filtersActive', { count: active }) : t('editor.filters')}</summary>
-          <div className={styles.filters}>
-            {has('discipline_id') && filter('discipline_id', discipline, setDiscipline, t('editor.allDisciplines'))}
-            {has('status') && !trash && filter('status', status, setStatus, t('editor.allStatuses'))}
-            {has('source') && filter('source', source, setSource, t('editor.allSources'))}
-          </div>
-        </details>
-        <div className={styles.listActions}>
-          <button type="button" className={styles.primary} onClick={() => onCreate()}>+ {t('editor.new')}</button>
-          {has('status') && (
-            <label className={styles.inline}>
-              <input type="checkbox" checked={trash} onChange={(e) => { setTrash(e.target.checked); setChecked(new Set()); }} /> {t('editor.trash')}
-            </label>
-          )}
-          <span className={styles.muted}>{t('editor.count', { count: rows.length })}</span>
-        </div>
+        <ListTools type={type} tables={tables} filters={filters} onFilters={onFilters} count={rows.length} onCreate={() => onCreate()} />
         {type.id === 'keyword' && !trash && <Candidates tables={tables} onCreate={(name, variants) => onCreate({ name_pt: name, variants_pt: variants.join(', ') })} />}
         {rows.length > 0 && (
           <button type="button" className={styles.linkButton} onClick={() => setChecked(new Set(rows.map((r) => text(r.id))))}>

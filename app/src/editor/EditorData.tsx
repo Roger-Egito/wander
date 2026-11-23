@@ -1,19 +1,16 @@
 /**
- * The Editor's connection to Wander Data: the Google token, the adapter, and the last
- * read of every tab. The first connect has to come from a click (Google's popup), after
- * that every save reads the sheet again, so the Editor always shows what the sheet has.
+ * The Editor's connection to Wander Data: the adapter and the last read of every tab.
+ * The first connect has to come from a click (Google's popup). After that, every save
+ * reads the sheet again, so the Editor always shows what the sheet has, and coming back
+ * to the Editor while the token is still valid reconnects without asking.
  */
-import { useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { EditorDataContext } from '../contexts.ts';
+import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Tables } from '@wander/content';
-import { SheetsAdapter } from '../adapters/sheets/adapter.ts';
-import { googleSheetsToken } from '../adapters/sheets/googleToken.ts';
-import { googleSheetsTransport } from '../adapters/sheets/transport.ts';
-import { GOOGLE_CLIENT_ID, WANDER_DATA_ID } from '../config.ts';
+import { sheetsAdapter, sheetsToken } from '../adapters/sheets/session.ts';
+import { EditorDataContext } from '../contexts.ts';
 
 export function EditorDataProvider({ children }: { children: ReactNode }) {
-  const token = useMemo(() => googleSheetsToken(GOOGLE_CLIENT_ID), []);
-  const adapter = useMemo(() => new SheetsAdapter(googleSheetsTransport(WANDER_DATA_ID, token.get)), [token]);
+  const adapter = sheetsAdapter;
   const [tables, setTables] = useState<Tables | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +32,17 @@ export function EditorDataProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async () => {
     try {
-      await token.get();
+      await sheetsToken.get();
       await reload();
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [token, reload]);
+  }, [reload]);
+
+  // Back on the Editor with a token that's still valid: read the sheet straight away.
+  useEffect(() => {
+    if (sheetsToken.connected()) void reload();
+  }, [reload]);
 
   const value = useMemo(() => ({ adapter, tables, loading, error, connect, reload }), [adapter, tables, loading, error, connect, reload]);
   return <EditorDataContext.Provider value={value}>{children}</EditorDataContext.Provider>;

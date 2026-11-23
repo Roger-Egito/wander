@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react';
 import {
   costsOf, formatCost, formatSkillRequirements, formatStatRequirements, inLanguage, levelGroups, pdCost, skillGroups, statGroups, traitKind,
-  translateName, type Condition, type Keyword, type Modifier, type Skill, type Status, type Trait,
+  translateName, type Condition, type Discipline, type Keyword, type Modifier, type Skill, type Status, type Trait,
 } from '@wander/rules';
 import { useContent } from '../ContentProvider.tsx';
 import { useLanguage } from '../i18n/LanguageProvider.tsx';
@@ -175,6 +175,23 @@ export function KeywordCard({ keyword }: { keyword: Keyword }) {
         <RichText text={(en && keyword.description_en) || keyword.description_pt} exclude={keyword.id} />
       </p>
       {url && <a className={styles.link} href={url} target="_blank" rel="noreferrer">{t('card.rules')}</a>}
+    </Card>
+  );
+}
+
+/* --- discipline ------------------------------------------------------------------ */
+
+export function DisciplineCard({ discipline }: { discipline: Discipline }) {
+  const content = useContent();
+  const { language } = useLanguage();
+  const at = (field: string) => ({ tab: 'Disciplines' as const, id: discipline.id, field });
+  return (
+    <Card title={inLanguage(content, language, at('name'), discipline.name, discipline.name_en)} status={discipline.status} subtitle={<><span className={styles.id}>{discipline.id}</span> · {discipline.source}</>}>
+      {discipline.description && (
+        <p className={styles.description}>
+          <RichText text={inLanguage(content, language, at('description'), discipline.description, discipline.description_en)} />
+        </p>
+      )}
     </Card>
   );
 }
