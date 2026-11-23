@@ -1,0 +1,9 @@
+{
+  "name": "@wander/content",
+  "private": true,
+  "type": "module",
+  "description": "What Wander Data holds: its tabs and columns, the content types, and the rules every row follows.",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}

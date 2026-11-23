@@ -1,0 +1,71 @@
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px 16px 64px;
+}
+
+.page h2 {
+  margin: 32px 0 12px;
+  font-size: 1.1rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.source {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+}
+
+/* One column on a phone, as many 320px cards as fit on wider screens. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.prose {
+  max-width: 70ch;
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.picker select {
+  min-height: 44px;
+  padding: 0 8px;
+  font: inherit;
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.selected {
+  margin-top: 16px;
+  max-width: 480px;
+}

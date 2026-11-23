@@ -1,0 +1,13 @@
+{
+  "name": "@wander/supabase",
+  "private": true,
+  "type": "module",
+  "description": "The Supabase database: migrations (tables, Row Level Security, policies) and their tests.",
+  "scripts": {
+    "push": "supabase db push --remote"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.17",
+    "supabase": "3.2.0"
+  }
+}

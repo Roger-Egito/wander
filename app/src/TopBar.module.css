@@ -1,0 +1,78 @@
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-raised);
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav a {
+  color: var(--color-txt);
+  text-decoration: none;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.nav a[aria-current='page'] {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.button {
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-txt);
+  background: var(--color-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-bad);
+  font-size: 0.9rem;
+}
+
+/* On a phone: brand and links on one row, toggles and sign-out on the next, and the
+   name left out of the sign-out button (it's still its tooltip). */
+@media (max-width: 600px) {
+  .bar {
+    padding: 6px 12px;
+    gap: 4px 12px;
+  }
+  .end {
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .who {
+    display: none;
+  }
+}

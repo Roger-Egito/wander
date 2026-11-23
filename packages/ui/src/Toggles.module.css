@@ -1,0 +1,29 @@
+.group {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 44px tall: the smallest comfortable touch target on a phone. */
+.option {
+  min-height: 44px;
+  min-width: 52px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: none;
+  cursor: pointer;
+}
+
+.option + .option {
+  border-left: 1px solid var(--color-border);
+}
+
+.option[aria-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}

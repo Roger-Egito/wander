@@ -1,0 +1,21 @@
+# Checks every pull request: type check, tests, and a production build. A pull request
+# that breaks any of them shows a red check before it can reach main.
+name: Checks
+
+on:
+  pull_request:
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build

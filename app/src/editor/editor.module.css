@@ -1,0 +1,711 @@
+/* --- page and toolbar -------------------------------------------------------------- */
+
+.door {
+  max-width: 640px;
+  margin: 32px auto;
+  padding: 0 16px;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.workspace {
+  padding: 12px 16px 24px;
+  display: grid;
+  /* An explicit column that may shrink: an implicit one sizes itself to its widest
+     content, so a scrolling row of tabs would widen the page. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.typeTab {
+  min-height: 44px;
+  padding: 0 12px;
+  font: inherit;
+  color: var(--color-txt);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.typeTab[aria-selected='true'] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.saveBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: var(--color-muted);
+}
+
+.status[data-kind='dirty'] {
+  color: var(--color-warn);
+}
+
+.status[data-kind='error'] {
+  color: var(--color-bad);
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.primary {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  font-weight: 600;
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.secondary {
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+}
+
+/* --- three panes, tabs on a phone -------------------------------------------------- */
+
+.panes {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr) minmax(300px, 420px);
+  gap: 16px;
+  align-items: start;
+}
+
+.paneTabs {
+  display: none;
+}
+
+.listPane,
+.previewPane {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+
+.previewPane {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 1180px) {
+  .panes {
+    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  }
+  .previewPane {
+    grid-column: 2;
+    position: static;
+    max-height: none;
+  }
+}
+
+@media (max-width: 900px) {
+  /* The type tabs become one row you swipe, instead of wrapping onto three. */
+  .types {
+    flex: 1 1 100%;
+    /* Without this a flex item won't shrink below its content, and the row of tabs
+       would widen the whole page instead of scrolling. */
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .typeTab {
+    flex: none;
+  }
+  .workspace {
+    padding: 8px 12px 16px;
+    gap: 8px;
+  }
+  .paneTabs {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    order: 3;
+    background: var(--color-raised);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .paneTabs button {
+    flex: 1;
+    min-height: 48px;
+    font: inherit;
+    color: var(--color-txt);
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+  .paneTabs button[aria-pressed='true'] {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-weight: 600;
+  }
+  .panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .panes > section {
+    display: none;
+    position: static;
+    max-height: none;
+    grid-column: 1;
+  }
+  .panes[data-pane='list'] > .listPane,
+  .panes[data-pane='edit'] > .formPane,
+  .panes[data-pane='preview'] > .previewPane {
+    display: grid;
+  }
+}
+
+/* --- list -------------------------------------------------------------------------- */
+
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.listTools {
+  display: grid;
+  gap: 8px;
+}
+
+.filters {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.filterBox summary {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--color-muted);
+}
+
+.listActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.row {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0 8px;
+  padding: 6px 10px;
+  font: inherit;
+  text-align: left;
+  color: var(--color-txt);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--color-raised);
+}
+
+.row[aria-current] {
+  background: var(--color-raised);
+  border-color: var(--color-accent);
+}
+
+.rowName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.rowMeta {
+  grid-column: 1;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.badge {
+  color: var(--color-warn);
+}
+
+.problemBadge {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-width: 24px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--color-bad);
+  border: 1px solid var(--color-bad);
+}
+
+/* --- form -------------------------------------------------------------------------- */
+
+.form {
+  display: grid;
+  gap: 16px;
+}
+
+.formTitle {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: 12px 16px;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.field,
+.fieldCompact {
+  display: grid;
+  gap: 4px;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.required {
+  color: var(--color-accent);
+}
+
+.input,
+.textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.fieldCompact .input,
+.fieldCompact .textarea {
+  min-height: 40px;
+  padding: 6px 8px;
+}
+
+[data-invalid] .input,
+[data-invalid] .textarea {
+  border-color: var(--color-bad);
+}
+
+.checkbox {
+  width: 22px;
+  height: 22px;
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.english {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-border);
+}
+
+.problem {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--color-bad);
+}
+
+.problems {
+  margin: 0;
+  padding: 10px 12px 10px 28px;
+  border: 1px solid var(--color-bad);
+  border-radius: 8px;
+  color: var(--color-bad);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.tag button {
+  min-width: 28px;
+  min-height: 28px;
+  font: inherit;
+  color: var(--color-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tagAdd {
+  min-height: 36px;
+  padding: 4px 8px;
+  font: inherit;
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: 1px dashed var(--color-border);
+  border-radius: 8px;
+}
+
+/* Child rows: a trait's levels, a skill's requirements, modifiers. */
+.subtable {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.childRow {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  background: var(--color-sunken);
+  border-radius: 8px;
+}
+
+.childId {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.childFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(160px, 100%), 1fr));
+  gap: 8px 12px;
+}
+
+.childWide {
+  grid-column: 1 / -1;
+}
+
+.nested {
+  display: grid;
+  gap: 8px;
+}
+
+.modifier {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(70px, 100px) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.add,
+.remove {
+  justify-self: start;
+  min-height: 40px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--color-txt);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.remove {
+  color: var(--color-bad);
+  border-color: transparent;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.muted,
+.empty {
+  color: var(--color-muted);
+}
+
+.miniTree {
+  height: 320px;
+}
+
+.miniTree > * {
+  height: 100%;
+  min-height: 0;
+}
+
+/* --- selection and bulk actions ---------------------------------------------------- */
+
+.rowWrap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px;
+}
+
+.rowCheck {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+
+.rowCheck input {
+  width: 20px;
+  height: 20px;
+}
+
+.bulk {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--color-accent);
+  border-radius: 10px;
+  background: var(--color-raised);
+}
+
+.bulkHead,
+.bulkRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulkHead {
+  justify-content: space-between;
+}
+
+.bulkField {
+  display: grid;
+  gap: 6px;
+}
+
+.linkButton {
+  min-height: 44px;
+  font: inherit;
+  color: var(--color-link);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.danger {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-bad);
+  background: var(--color-raised);
+  border: 1px solid var(--color-bad);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.danger:disabled {
+  opacity: 0.5;
+}
+
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 20px;
+  color: var(--color-txt);
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px var(--color-shadow);
+}
+
+.dialog::backdrop {
+  background: var(--color-backdrop);
+}
+
+.dialogMessage {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+
+.dialogList {
+  max-height: 180px;
+  overflow: auto;
+  margin: 0 0 12px;
+  padding: 8px 8px 8px 28px;
+  background: var(--color-sunken);
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* --- keywords, translations ------------------------------------------------------- */
+
+.candidates {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.candidates summary {
+  cursor: pointer;
+  min-height: 32px;
+}
+
+.candidates ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.candidates li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.translations {
+  display: grid;
+  gap: 12px;
+  max-width: 900px;
+}
+
+.translationList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.translation {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.translation[data-state='outdated'] {
+  border-color: var(--color-bad);
+}
+
+.translationHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 6px;
+}
+
+.translationText {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.stateBadge {
+  margin-left: auto;
+  font-size: 0.75rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: var(--color-muted);
+}
+
+.stateBadge[data-state='outdated'] {
+  color: var(--color-bad);
+}
+
+.stateBadge[data-state='missing'] {
+  color: var(--color-warn);
+}
+
+.stateBadge[data-state='manual'] {
+  color: var(--color-good);
+}

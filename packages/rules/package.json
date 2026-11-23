@@ -1,0 +1,12 @@
+{
+  "name": "@wander/rules",
+  "private": true,
+  "type": "module",
+  "description": "Wander's game rules in code: content as typed objects, how costs and requirements read, and whether a character can take a skill or trait level.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@wander/content": "*"
+  }
+}

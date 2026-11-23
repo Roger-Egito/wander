@@ -1,0 +1,18 @@
+{
+  "name": "@wander/sheet-script",
+  "private": true,
+  "type": "module",
+  "description": "The Apps Script bound to Wander Data: IDs and edited_at for rows typed in the grid, the Wander menu, weekly backups.",
+  "scripts": {
+    "build": "vite build",
+    "push": "vite build && clasp push --force"
+  },
+  "dependencies": {
+    "@wander/content": "*"
+  },
+  "devDependencies": {
+    "@google/clasp": "3.4.1",
+    "@types/google-apps-script": "2.0.15",
+    "vite": "8.3.8"
+  }
+}

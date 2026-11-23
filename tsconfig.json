@@ -1,0 +1,23 @@
+{
+  // One type check for the whole repo. Nothing is compiled: Node runs the .ts files
+  // directly (type stripping) and Vite bundles the app, so TypeScript only checks.
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": ["es2024", "dom", "dom.iterable"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    // Type stripping can only remove types, so no enums, namespaces or parameter properties.
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": false,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "resolveJsonModule": true,
+    // vite/client types CSS modules and import.meta.glob for the app and the UI package.
+    "types": ["node", "vite/client"]
+  },
+  "include": ["packages/*/src", "tools/*/src", "supabase/test", "sheet-script/src", "sheet-script/vite.config.ts", "app/src", "app/vite.config.ts", "vitest.config.ts"]
+}

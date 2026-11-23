@@ -1,0 +1,13 @@
+{
+  "name": "@wander/snapshot",
+  "private": true,
+  "type": "module",
+  "description": "Turns an .xlsx export of Wander Data into one JSON per tab, for the app's local development.",
+  "scripts": {
+    "snapshot": "node src/main.ts"
+  },
+  "dependencies": {
+    "@wander/content": "*",
+    "@wander/migration": "*"
+  }
+}

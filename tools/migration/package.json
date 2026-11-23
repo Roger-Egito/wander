@@ -1,0 +1,17 @@
+{
+  "name": "@wander/migration",
+  "private": true,
+  "type": "module",
+  "description": "Reads an .xlsx export of Fichas v15 (never the sheet itself) and turns it into Wander Data rows plus a report.",
+  "scripts": {
+    "migrate": "node src/main.ts"
+  },
+  "dependencies": {
+    "@wander/content": "*",
+    "@wander/rules": "*",
+    "exceljs": "^4.4.0"
+  },
+  "exports": {
+    "./workbook": "./src/workbook.ts"
+  }
+}

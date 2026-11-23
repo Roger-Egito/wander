@@ -1,0 +1,29 @@
+{
+  "name": "wander",
+  "private": true,
+  "type": "module",
+  "description": "Wander: the game data, the Editor and the app players use.",
+  "workspaces": [
+    "packages/*",
+    "tools/*",
+    "app",
+    "supabase",
+    "sheet-script"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate": "npm run migrate -w tools/migration",
+    "dev": "npm run dev -w app",
+    "build": "npm run build -w app",
+    "snapshot": "npm run snapshot -w tools/snapshot --"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
