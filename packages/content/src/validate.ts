@@ -18,7 +18,10 @@ export interface Problem {
 }
 
 const text = (v: unknown) => (v === null || v === undefined ? '' : String(v));
-const fold = (v: unknown) => text(v).toLocaleLowerCase('pt-BR');
+// Plain toLowerCase: Portuguese has no special lowercasing rules (only languages like
+// Turkish and Lithuanian do), so it matches toLocaleLowerCase('pt-BR') here, and it's
+// many times faster in browsers, which matters for a check that runs on every edit.
+const fold = (v: unknown) => text(v).toLowerCase();
 const isBlank = (v: unknown) => text(v) === '';
 
 /** The words used in problems, shared with the formula so both read the same. */
@@ -45,10 +48,19 @@ export function validate(data: Tables): Problem[] {
     new Set((Array.isArray(options) ? options : data[(options as { tab: TabName }).tab].map((r) => r[(options as { column: string }).column])).map(fold));
   const idSet = (tab: TabName, liveOnly: boolean) =>
     new Set(data[tab].filter((r) => !liveOnly || fold(r.status) !== 'deleted').map((r) => fold(r.id)));
+  // Rows by folded ID, one index per tab, built the first time a check needs it. Finding
+  // a child row's parent by scanning the parent tab, once per child per check, was
+  // hundreds of thousands of comparisons: about a second in a browser.
+  const indexes = new Map<TabName, Map<string, Row>>();
+  const byId = (tab: TabName) => {
+    let index = indexes.get(tab);
+    if (!index) indexes.set(tab, (index = new Map(data[tab].map((r) => [fold(r.id), r]))));
+    return index;
+  };
 
   for (const check of allChecks()) {
     const { scope } = check;
-    const rows = data[scope.tab].filter((r) => !isBlank(r[scope.presentKey]) && isLive(scope, r, data));
+    const rows = data[scope.tab].filter((r) => !isBlank(r[scope.presentKey]) && isLive(scope, r, byId));
     const report = (row: Row, problem: string, detail: string) =>
       problems.push({ level: check.level, problem, table: scope.tab, id: text(row[scope.idKey]), detail });
 
@@ -138,11 +150,11 @@ export function validate(data: Tables): Problem[] {
   return problems;
 }
 
-function isLive(scope: Scope, row: Row, data: Tables) {
+function isLive(scope: Scope, row: Row, byId: (tab: TabName) => Map<string, Row>) {
   if (!scope.live) return true;
   if ('statusKey' in scope.live) return fold(row[scope.live.statusKey]) !== 'deleted';
   let current: Row | undefined = row;
-  for (const { key, tab } of scope.live.parents) current = data[tab].find((p) => fold(p.id) === fold(current?.[key]));
+  for (const { key, tab } of scope.live.parents) current = current && byId(tab).get(fold(current[key]));
   return fold(current?.status) !== 'deleted';
 }
 

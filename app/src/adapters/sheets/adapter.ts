@@ -28,7 +28,7 @@ export type RowValues = Record<string, CellValue>;
 export const PENDING_ID = 'NOVO';
 
 /** Swaps the pending ID for the real one in every child value ("NOVO.2" → "FAC-22.2"). */
-function withId(children: Children, id: string): Children {
+export function withId(children: Children, id: string): Children {
   const swap = (value: unknown) => (typeof value === 'string' && value.startsWith(`${PENDING_ID}.`) ? `${id}${value.slice(PENDING_ID.length)}` : value);
   return Object.fromEntries(
     Object.entries(children).map(([key, rows]) => [

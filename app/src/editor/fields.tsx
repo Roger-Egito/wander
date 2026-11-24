@@ -4,40 +4,21 @@
  * references dropdowns (with type-ahead when there are many options), tags chips,
  * subtables a list of child rows, modifiers a list of stat changes.
  */
-import { useId } from 'react';
-import { CONTENT_TYPES, englishKey, type ContentType, type Field, type Tables } from '@wander/content';
+import { memo, useId } from 'react';
+import { englishKey, type Field, type Tables } from '@wander/content';
 import { useLanguage } from '@wander/ui';
 import type { ChildRow, Children } from '../adapters/sheets/adapter.ts';
 import type { CellValue } from '../adapters/sheets/transport.ts';
 import { columnsOf, nextChildId } from './draft.ts';
+import { optionsFor, type Option } from './options.ts';
 import styles from './editor.module.css';
-
-interface Option {
-  value: string;
-  label: string;
-}
 
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value));
 
-/** The choices of an enum, tags or reference field, read from the current data. */
-export function optionsFor(field: Field, tables: Tables): Option[] | null {
-  const fromTab = (tab: keyof Tables, column: string) =>
-    [...new Set(tables[tab].map((r) => text(r[column]).trim()).filter(Boolean))].map((v) => ({ value: v, label: v }));
-  if (field.type === 'enum' || (field.type === 'tags' && field.options)) {
-    const options = field.options!;
-    return Array.isArray(options) ? options.map((v: string) => ({ value: v, label: v })) : fromTab((options as { tab: keyof Tables }).tab, (options as { column: string }).column);
-  }
-  if (field.type === 'reference') {
-    if (typeof field.to === 'string') {
-      const type = (CONTENT_TYPES as readonly ContentType[]).find((t) => t.id === field.to)!;
-      return tables[type.tab].filter((r) => r.status !== 'deleted').map((r) => ({ value: text(r.id), label: `${text(r.id)} · ${text(r[type.nameKey])}` }));
-    }
-    // A trait level: "FAC-14.2 · Mau-Cheiro Bom".
-    const traitName = new Map(tables.Traits.map((t) => [text(t.id), text(t.name)]));
-    return tables[field.to.tab].map((r) => ({ value: text(r.id), label: `${text(r.id)} · ${traitName.get(text(r.trait_id)) ?? ''} ${text(r.tier)}`.trim() }));
-  }
-  return null;
-}
+/** A long list of choices for type-ahead. Its options come from the cache, so it re-renders only after a new read of the sheet. */
+const OptionList = memo(function OptionList({ id, options }: { id: string; options: Option[] }) {
+  return <datalist id={id}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</datalist>;
+});
 
 /** A number input's value: a number when it reads as one, else the text (so validation can say why). */
 const toNumber = (raw: string): CellValue => (raw.trim() === '' ? '' : Number.isNaN(Number(raw.replace(',', '.'))) ? raw : Number(raw.replace(',', '.')));
@@ -72,7 +53,7 @@ export function FieldInput({ field, value, onChange, tables, problems = [], comp
     control = (
       <>
         <input id={id} className={styles.input} list={list} value={text(value)} onChange={(e) => onChange(e.target.value.split(' · ')[0])} placeholder={t('editor.choose')} />
-        <datalist id={list}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</datalist>
+        <OptionList id={list} options={options} />
         {/* The field holds only the ID, so say which row it is. */}
         {options.find((o) => o.value === text(value)) && <span className={styles.hint}>{options.find((o) => o.value === text(value))!.label}</span>}
       </>

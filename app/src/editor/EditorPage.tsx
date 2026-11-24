@@ -7,18 +7,20 @@
  * Saving sends only what changed. The sheet is read again after each save, so what
  * the Editor shows is always what the sheet holds.
  */
-import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { englishKey, validate, type ContentType, type Field, type Problem, type Tables } from '@wander/content';
 import { loadContent } from '@wander/rules';
 import { ConditionCard, ContentProvider, KeywordCard, SkillCard, SkillTree, TraitCard, useLanguage } from '@wander/ui';
 import { CONTENT_TYPES } from '@wander/content';
 import { useAuth } from '../auth/AuthProvider.tsx';
-import type { RowValues } from '../adapters/sheets/adapter.ts';
+import { withId, type RowValues } from '../adapters/sheets/adapter.ts';
 import type { CellValue } from '../adapters/sheets/transport.ts';
 import { EditorDataProvider, useEditorData } from './EditorData.tsx';
+import { offline } from './offline.ts';
 import { changedValues, childrenChanged, draftFrom, emptyDraft, isDirty, mergeDraft, PENDING_ID, problemsFor, typeById, type Draft } from './draft.ts';
 import { BulkBar } from './bulk.tsx';
 import { CardsView } from './CardsView.tsx';
+import { useSettled, useStableCallback } from './hooks.ts';
 import { filterRows, NO_FILTERS, type Filters } from './filters.ts';
 import { ListTools } from './ListTools.tsx';
 import { keywordCandidates } from './keywordCandidates.ts';
@@ -30,6 +32,10 @@ import styles from './editor.module.css';
 const TYPES = CONTENT_TYPES as readonly ContentType[];
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value).trim());
 type View = 'list' | 'cards';
+
+/** Two drafts are the same thing (not just two versions of it) when they're the same row of the same type. */
+const sameDraft = (a: { type: ContentType; draft: Draft } | null, b: { type: ContentType; draft: Draft } | null) =>
+  a?.type === b?.type && text(a?.draft.values.id) === text(b?.draft.values.id);
 const VIEW_KEY = 'wander-editor-view';
 /** The view picked last time in this browser, else the list. */
 const savedView = (): View => {
@@ -46,6 +52,8 @@ const today = () => new Date().toLocaleDateString('sv-SE');
 export function EditorPage() {
   const { t } = useLanguage();
   const { loading, session, profile } = useAuth();
+  // Offline mode only touches an in-memory copy of the local snapshot, so it needs no account.
+  if (offline) return <EditorDataProvider><Editor /></EditorDataProvider>;
   if (loading || (session && !profile)) return null;
   if (!session || !profile?.is_admin) {
     return <main className={styles.door}><p>{t(session ? 'editor.adminsOnly' : 'editor.signInFirst')}</p></main>;
@@ -75,7 +83,7 @@ type SaveState = { kind: 'idle' | 'saving' | 'saved' } | { kind: 'error'; messag
 
 function Workspace({ tables }: { tables: Tables }) {
   const { language, t } = useLanguage();
-  const { adapter, reload } = useEditorData();
+  const { adapter, refresh, apply } = useEditorData();
   const [typeId, setTypeId] = useState('skill');
   const [saved, setSaved] = useState<Draft | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -99,11 +107,11 @@ function Workspace({ tables }: { tables: Tables }) {
   const dirty = changed || (!!saved && saved.values.id === PENDING_ID);
 
   const allProblems = useMemo(() => validate(tables), [tables]);
-  // Deferred so typing stays fast while validation and the preview catch up. The draft
-  // travels with its type: a deferred draft lags behind, and checking an old trait draft
-  // as a skill (just after switching types) would show the wrong problems and preview.
+  // Checking the draft against every rule and rebuilding the preview are the heavy parts
+  // (validating the whole sheet), so they run once typing pauses, not once per letter.
+  // The draft travels with its type, so a result is never shown for the wrong row.
   const current = useMemo(() => (draft ? { type, draft } : null), [type, draft]);
-  const deferred = useDeferredValue(current);
+  const deferred = useSettled(current, 400, sameDraft);
   const problems = useMemo(() => (deferred && deferred.type === type ? problemsFor(tables, deferred.type, deferred.draft) : []), [tables, type, deferred]);
 
   const leave = useCallback(() => !changed || window.confirm(t('editor.confirmLeave')), [changed, t]);
@@ -138,6 +146,12 @@ function Workspace({ tables }: { tables: Tables }) {
     setPane('list');
   };
 
+  // The list re-renders only when its own props change: these keep one identity, so
+  // typing in the form leaves the 260-row list alone.
+  const stableSelect = useStableCallback(select);
+  const stableCreate = useStableCallback(create);
+  const stableAfterBulk = useStableCallback((ids: string[], fresh: Tables | null, removed: boolean) => afterBulk(ids, fresh, removed));
+
   /** After a bulk action: the open row follows the sheet, or closes if it was deleted for good. */
   const afterBulk = (ids: string[], fresh: Tables | null, removed: boolean) => {
     const open = text(draft?.values.id);
@@ -164,17 +178,19 @@ function Workspace({ tables }: { tables: Tables }) {
       } else {
         await adapter.update(type.id, id, { ...changedValues(saved, draft), ...stamp }, childrenChanged(saved, draft) ? draft.children : undefined);
       }
-      const fresh = await reload();
-      if (fresh) {
-        const next = draftFrom(type, fresh, id);
-        setSaved(next);
-        setDraft(structuredClone(next));
-      }
+      // Show the saved row right away, from what was just written. The sheet is read
+      // again in the background for what it computes itself (automatic translations).
+      const local = mergeDraft(tables, type, { values: { ...draft.values, ...stamp, id }, children: withId(draft.children, id) });
+      apply(local);
+      const next = draftFrom(type, local, id);
+      setSaved(next);
+      setDraft(structuredClone(next));
       setSaveState({ kind: 'saved' });
+      void refresh();
     } catch (e) {
       setSaveState({ kind: 'error', message: (e as Error).message });
     }
-  }, [adapter, draft, reload, saveState.kind, saved, type]);
+  }, [adapter, apply, draft, refresh, saveState.kind, saved, tables, type]);
 
   // Ctrl+S (Cmd+S) saves, and leaving the page with unsaved changes asks first.
   useEffect(() => {
@@ -240,7 +256,7 @@ function Workspace({ tables }: { tables: Tables }) {
 
       <div className={styles.panes} data-pane={pane}>
         <section className={styles.listPane} aria-label={t('editor.tabList')}>
-          <List key={type.id} type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} selected={text(draft?.values.id)} onSelect={select} onCreate={create} onBulkDone={afterBulk} />
+          <List key={type.id} type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} selected={text(draft?.values.id)} onSelect={stableSelect} onCreate={stableCreate} onBulkDone={stableAfterBulk} />
         </section>
         <section className={styles.formPane} aria-label={t('editor.tabEdit')}>
           {draft ? <Form type={type} tables={tables} draft={draft} problems={problems} onChange={setDraft} isNew={saved?.values.id === PENDING_ID} /> : <p className={styles.empty}>{t('editor.noSelection')}</p>}
@@ -256,7 +272,7 @@ function Workspace({ tables }: { tables: Tables }) {
 
 /* --- list ------------------------------------------------------------------------ */
 
-function List({ type, tables, problems, filters, onFilters, selected, onSelect, onCreate, onBulkDone }: {
+const List = memo(function List({ type, tables, problems, filters, onFilters, selected, onSelect, onCreate, onBulkDone }: {
   type: ContentType;
   tables: Tables;
   problems: Problem[];
@@ -332,7 +348,7 @@ function List({ type, tables, problems, filters, onFilters, selected, onSelect, 
       </ul>
     </div>
   );
-}
+});
 
 /** Capitalized phrases in the descriptions that aren't keywords yet, each a click from being one. */
 function Candidates({ tables, onCreate }: { tables: Tables; onCreate: (name: string, variants: string[]) => void }) {

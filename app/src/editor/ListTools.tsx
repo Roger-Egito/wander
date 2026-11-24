@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import type { ContentType, Field, Tables } from '@wander/content';
 import { useLanguage } from '@wander/ui';
-import { optionsFor } from './fields.tsx';
+import { optionsFor } from './options.ts';
 import { activeFilters, type Filters } from './filters.ts';
 import styles from './editor.module.css';
 

@@ -33,6 +33,10 @@ export interface EditorDataState {
   error: string | null;
   connect: () => Promise<void>;
   reload: () => Promise<Tables | null>;
+  /** Re-reads the sheet without a loading state (after a save). */
+  refresh: () => Promise<void>;
+  /** Shows these tables right away (the result of a save, before the re-read). */
+  apply: (tables: Tables) => void;
 }
 
 export const AuthContext = createContext<AuthState | null>(null);
