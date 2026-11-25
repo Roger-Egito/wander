@@ -27,11 +27,7 @@ const text = (value: unknown) => (value === null || value === undefined ? '' : S
 const editable = (type: ContentType) =>
   type.fields.filter((f) => !f.system && f.key !== type.nameKey && f.key !== 'status' && f.type !== 'subtable' && f.type !== 'modifiers' && f.type !== 'richtext');
 
-/**
- * "Selecionar todos" and, once something is checked, the bulk actions. The selection
- * itself belongs to the Workspace, so it's the same in every view.
- */
-export function SelectionTools({ type, tables, rowIds, checked, onChecked, trash, onBulkDone }: {
+interface SelectionProps {
   type: ContentType;
   tables: Tables;
   /** The rows the filters show, which "select all" selects. */
@@ -40,25 +36,43 @@ export function SelectionTools({ type, tables, rowIds, checked, onChecked, trash
   onChecked: (checked: Set<string>) => void;
   trash: boolean;
   onBulkDone: (ids: string[], fresh: Tables | null, removed: boolean) => void;
-}) {
+}
+
+/** "Selecionar todos (n)": every row the filters show. */
+export function SelectAll({ rowIds, onChecked }: Pick<SelectionProps, 'rowIds' | 'onChecked'>) {
   const { t } = useLanguage();
+  if (!rowIds.length) return null;
+  return (
+    <button type="button" className={styles.linkButton} onClick={() => onChecked(new Set(rowIds))}>
+      {t('editor.selectAll', { count: rowIds.length })}
+    </button>
+  );
+}
+
+/** The bulk actions, once something is checked. */
+export function SelectedActions({ type, tables, checked, onChecked, trash, onBulkDone }: Omit<SelectionProps, 'rowIds'>) {
+  if (!checked.size) return null;
+  return (
+    <BulkBar
+      type={type}
+      tables={tables}
+      ids={[...checked]}
+      trash={trash}
+      onClear={() => onChecked(new Set())}
+      onDone={(ids, fresh, removed) => { onChecked(new Set()); onBulkDone(ids, fresh, removed); }}
+    />
+  );
+}
+
+/**
+ * "Selecionar todos" and, once something is checked, the bulk actions, one under the
+ * other. The selection itself belongs to the Workspace, so it's the same in every view.
+ */
+export function SelectionTools(props: SelectionProps) {
   return (
     <>
-      {rowIds.length > 0 && (
-        <button type="button" className={styles.linkButton} onClick={() => onChecked(new Set(rowIds))}>
-          {t('editor.selectAll', { count: rowIds.length })}
-        </button>
-      )}
-      {checked.size > 0 && (
-        <BulkBar
-          type={type}
-          tables={tables}
-          ids={[...checked]}
-          trash={trash}
-          onClear={() => onChecked(new Set())}
-          onDone={(ids, fresh, removed) => { onChecked(new Set()); onBulkDone(ids, fresh, removed); }}
-        />
-      )}
+      <SelectAll rowIds={props.rowIds} onChecked={props.onChecked} />
+      <SelectedActions {...props} />
     </>
   );
 }

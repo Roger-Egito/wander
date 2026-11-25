@@ -11,7 +11,7 @@ import { useMemo } from 'react';
 import type { ContentType, Problem, Tables } from '@wander/content';
 import { loadContent } from '@wander/rules';
 import { ContentProvider, useLanguage } from '@wander/ui';
-import { SelectionTools } from './bulk.tsx';
+import { SelectAll, SelectedActions } from './bulk.tsx';
 import { CardFrame, hasNotes, toggled, type useOpenNotes } from './CardFrame.tsx';
 import { filterRows, type Filters } from './filters.ts';
 import { ListTools } from './ListTools.tsx';
@@ -33,21 +33,35 @@ export interface CardViewProps {
   onBulkDone: (ids: string[], fresh: Tables | null, removed: boolean) => void;
 }
 
-/** What the Cards view and the graph share above their cards: filters, selection and the notes toggle. */
-export function CardTools({ type, tables, filters, onFilters, checked, onChecked, notes, onCreate, onBulkDone, rowIds }: CardViewProps & { rowIds: string[] }) {
+/** The designer notes toggle: opens or closes the notes of every card shown. */
+export function AllNotesToggle({ type, notes, rowIds }: Pick<CardViewProps, 'type' | 'notes'> & { rowIds: string[] }) {
   const { t } = useLanguage();
+  if (!hasNotes(type)) return null;
   const allOpen = rowIds.length > 0 && rowIds.every((id) => notes.open.has(id));
   return (
+    <label className={styles.inline}>
+      <input type="checkbox" checked={allOpen} onChange={() => notes.toggleAll(rowIds)} /> {t('editor.allNotes')}
+    </label>
+  );
+}
+
+/**
+ * What the Cards view and the graph share above their cards: filters, "select all" and
+ * the notes toggle on the left, and the bulk actions, once something is checked, to
+ * their right on a wide screen (under them on a narrow one), so selecting never pushes
+ * the cards down on a PC.
+ */
+export function CardTools({ type, tables, filters, onFilters, checked, onChecked, notes, onCreate, onBulkDone, rowIds }: CardViewProps & { rowIds: string[] }) {
+  return (
     <div className={styles.cardTools}>
-      <ListTools type={type} tables={tables} filters={filters} onFilters={onFilters} count={rowIds.length} onCreate={onCreate} />
-      <div className={styles.cardToolsRow}>
-        <SelectionTools type={type} tables={tables} rowIds={rowIds} checked={checked} onChecked={onChecked} trash={filters.trash} onBulkDone={onBulkDone} />
-        {hasNotes(type) && (
-          <label className={styles.inline}>
-            <input type="checkbox" checked={allOpen} onChange={() => notes.toggleAll(rowIds)} /> {t('editor.allNotes')}
-          </label>
-        )}
+      <div className={styles.cardToolsMain}>
+        <ListTools type={type} tables={tables} filters={filters} onFilters={onFilters} count={rowIds.length} onCreate={onCreate} />
+        <div className={styles.cardToolsRow}>
+          <SelectAll rowIds={rowIds} onChecked={onChecked} />
+          <AllNotesToggle type={type} notes={notes} rowIds={rowIds} />
+        </div>
       </div>
+      <SelectedActions type={type} tables={tables} checked={checked} onChecked={onChecked} trash={filters.trash} onBulkDone={onBulkDone} />
     </div>
   );
 }

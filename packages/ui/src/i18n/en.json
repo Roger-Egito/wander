@@ -32,6 +32,8 @@
   "stat.total": "Total",
   "tree.empty": "No skills in this discipline.",
   "graph.empty": "No skills to show.",
+  "graph.fullscreen": "Full screen",
+  "graph.exitFullscreen": "Exit full screen",
   "tree.taken": "Taken",
   "tree.otherDiscipline": "Requires {skills} (another discipline)",
   "gallery.title": "Component gallery",

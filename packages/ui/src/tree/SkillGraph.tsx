@@ -1,14 +1,20 @@
 /**
- * Every skill given, as its full card, in one graph (React Flow): disciplines as bands,
- * levels as columns, arrows from each required skill to the skill that needs it (see
+ * Every skill given, as its full card, in one graph (React Flow): disciplines as blocks,
+ * levels as rows, arrows down from each required skill to the skill that needs it (see
  * graph.ts for the layout).
+ *
+ * "Tela cheia" lays the graph over the whole window (Esc or the same button leaves).
+ * It covers the page instead of using the browser's fullscreen, which shows only one
+ * element and would hide the keyword popovers, since those open at the end of the page.
+ * Whatever the page passes as `fullscreenTools` floats over the graph meanwhile (the
+ * Editor puts its selection there).
  *
  * Cards have different heights, so the graph measures them before placing them. React
  * Flow takes a node's size from the node object it's given, so the measured sizes live
  * here, go back into each node, and every size change lays the graph out again.
  */
 import {
-  Background, Controls, Handle, MarkerType, MiniMap, Position, ReactFlow, ReactFlowProvider, useReactFlow,
+  Background, Controls, Handle, MarkerType, MiniMap, Panel, Position, ReactFlow, ReactFlowProvider, useReactFlow,
   type Edge, type Node, type NodeChangeset, type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -48,6 +54,8 @@ export interface SkillGraphProps {
   skills: Skill[];
   /** What each node shows. Defaults to the skill's card. */
   renderCard?: (skill: Skill) => ReactNode;
+  /** Shown over the graph's top-left corner while it fills the window. */
+  fullscreenTools?: ReactNode;
 }
 
 export function SkillGraph(props: SkillGraphProps) {
@@ -58,11 +66,27 @@ export function SkillGraph(props: SkillGraphProps) {
   );
 }
 
-function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} /> }: SkillGraphProps) {
+function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} />, fullscreenTools }: SkillGraphProps) {
   const content = useContent();
   const { language, t } = useLanguage();
   const { fitView } = useReactFlow();
   const [sizes, setSizes] = useState<Map<string, Size>>(new Map());
+  const [fullscreen, setFullscreen] = useState(false);
+
+  // While the graph fills the window, Esc leaves and the page behind it doesn't scroll.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('dialog[open]')) setFullscreen(false);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [fullscreen]);
 
   const layout = useMemo(() => layoutGraph(skills, (id) => sizes.get(id) ?? UNMEASURED), [skills, sizes]);
   const measured = skills.length > 0 && skills.every((s) => sizes.has(s.id));
@@ -130,7 +154,7 @@ function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} /> }: 
   if (!skills.length) return <p className={treeStyles.empty}>{t('graph.empty')}</p>;
 
   return (
-    <div className={`${treeStyles.tree} ${styles.graph}`}>
+    <div className={`${treeStyles.tree} ${styles.graph}`} data-fullscreen={fullscreen}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -145,6 +169,12 @@ function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} /> }: 
         <Background gap={24} />
         <Controls showInteractive={false} />
         <MiniMap pannable zoomable className={styles.minimap} />
+        <Panel position="top-right">
+          <button type="button" className={styles.panelButton} aria-pressed={fullscreen} onClick={() => setFullscreen((on) => !on)}>
+            {t(fullscreen ? 'graph.exitFullscreen' : 'graph.fullscreen')}
+          </button>
+        </Panel>
+        {fullscreen && fullscreenTools && <Panel position="top-left" className={styles.toolsPanel}>{fullscreenTools}</Panel>}
       </ReactFlow>
     </div>
   );

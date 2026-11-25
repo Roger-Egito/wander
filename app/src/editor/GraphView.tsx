@@ -2,13 +2,15 @@
  * The graph view (skills only): every skill the filters show, as its card, with arrows
  * from each required skill to the skill that needs it. Each card has the same checkbox
  * and "Editar" button as in the Cards view, and the same filters and bulk actions sit
- * above it.
+ * above it. In full screen, "select all", the notes toggle and the bulk actions float
+ * over the graph, so cards can be selected and changed without leaving it.
  */
 import { useCallback, useMemo } from 'react';
 import { loadContent, type Skill } from '@wander/rules';
 import { ContentProvider, SkillGraph } from '@wander/ui';
 import { CardFrame, toggled } from './CardFrame.tsx';
-import { CardTools, useProblemCounts, type CardViewProps } from './CardsView.tsx';
+import { SelectionTools } from './bulk.tsx';
+import { AllNotesToggle, CardTools, useProblemCounts, type CardViewProps } from './CardsView.tsx';
 import { filterRows } from './filters.ts';
 import styles from './editor.module.css';
 
@@ -42,7 +44,16 @@ export function GraphView(props: CardViewProps) {
     <section className={styles.cardsView}>
       <CardTools {...props} rowIds={rowIds} />
       <ContentProvider content={content}>
-        <SkillGraph skills={skills} renderCard={renderCard} />
+        <SkillGraph
+          skills={skills}
+          renderCard={renderCard}
+          fullscreenTools={(
+            <div className={styles.floatingTools}>
+              <AllNotesToggle type={type} notes={notes} rowIds={rowIds} />
+              <SelectionTools type={type} tables={tables} rowIds={rowIds} checked={checked} onChecked={onChecked} trash={filters.trash} onBulkDone={props.onBulkDone} />
+            </div>
+          )}
+        />
       </ContentProvider>
     </section>
   );
