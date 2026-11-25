@@ -9,6 +9,10 @@
  *   - prefers the longest term ("Descanso Longo" over "Descanso"),
  *   - links each term once per text, the first time it appears, so a paragraph that
  *     says "Fadiga" four times doesn't become four buttons.
+ *
+ * The terms, their regex and their lookup table are built once per read of the data and
+ * language, and shared by every RichText. Built per card, a screen of 260 cards spent
+ * about a second on them in a desktop browser.
  */
 import { CONTENT_TYPES, type ContentType } from '@wander/content';
 import { inLanguage, type Content, type Language } from '@wander/rules';
@@ -23,10 +27,25 @@ export interface Term {
 
 export type Segment = string | { text: string; term: Term };
 
-const fold = (text: string) => text.toLocaleLowerCase('pt-BR');
+// Plain toLowerCase: the same result as pt-BR's for Portuguese letters, and much faster
+// than toLocaleLowerCase in Chrome.
+const fold = (text: string) => text.toLowerCase();
 
-/** Every term in this language. Keywords come first, so a keyword wins over a skill of the same name. */
+const termCache = new WeakMap<Content, Map<Language, Term[]>>();
+
+/**
+ * Every term in this language. Keywords come first, so a keyword wins over a skill of the
+ * same name. The same array for the same content and language.
+ */
 export function keywordTerms(content: Content, language: Language): Term[] {
+  let byLanguage = termCache.get(content);
+  if (!byLanguage) termCache.set(content, (byLanguage = new Map()));
+  let terms = byLanguage.get(language);
+  if (!terms) byLanguage.set(language, (terms = buildTerms(content, language)));
+  return terms;
+}
+
+function buildTerms(content: Content, language: Language): Term[] {
   const terms: Term[] = [];
   for (const k of content.keyword) {
     const words = language === 'pt' ? [k.name_pt, ...k.variants_pt] : [k.name_en, ...k.variants_en];
@@ -48,6 +67,14 @@ export function keywordTerms(content: Content, language: Language): Term[] {
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const patterns = new WeakMap<Term[], RegExp>();
+const lookups = new WeakMap<Term[], Map<string, Term>>();
+
+/** Each term by its folded text. */
+function lookupFor(terms: Term[]) {
+  let lookup = lookups.get(terms);
+  if (!lookup) lookups.set(terms, (lookup = new Map(terms.map((t) => [fold(t.text), t]))));
+  return lookup;
+}
 
 /** One regex for all terms, longest first, so the alternation takes the longest match. */
 function patternFor(terms: Term[]) {
@@ -65,7 +92,7 @@ function patternFor(terms: Term[]) {
  * (a skill's description saying its name doesn't link to itself).
  */
 export function splitKeywords(text: string, terms: Term[], exclude?: string): Segment[] {
-  const byText = new Map(terms.map((t) => [fold(t.text), t]));
+  const byText = lookupFor(terms);
   const linked = new Set<string>();
   const segments: Segment[] = [];
   let last = 0;

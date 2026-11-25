@@ -12,7 +12,7 @@
 import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Language } from '@wander/rules';
 import { LanguageContext, type LanguageState } from '../contexts.ts';
-import { initialLanguage, interpolate, LANGUAGE_STORAGE_KEY, MESSAGES } from './messages.ts';
+import { initialLanguage, LANGUAGE_STORAGE_KEY, translate } from './messages.ts';
 
 export function LanguageProvider({ children, initial }: { children: ReactNode; initial?: Language }) {
   const [language, setState] = useState<Language>(() => initial ?? initialLanguage());
@@ -31,7 +31,7 @@ export function LanguageProvider({ children, initial }: { children: ReactNode; i
   }, []);
 
   const value = useMemo<LanguageState>(
-    () => ({ language, setLanguage, t: (key, vars) => interpolate(MESSAGES[language][key] ?? key, vars) }),
+    () => ({ language, setLanguage, t: (key, vars) => translate(language, key, vars) }),
     [language, setLanguage],
   );
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

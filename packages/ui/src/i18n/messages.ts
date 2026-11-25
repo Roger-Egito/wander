@@ -11,6 +11,17 @@ export type MessageKey = keyof typeof pt;
 export const MESSAGES: Record<Language, Record<MessageKey, string>> = { pt, en };
 export const LANGUAGE_STORAGE_KEY = 'wander-language';
 
+/**
+ * The message for `key` in `language`, variables filled. A message with a count can have
+ * a singular form under `${key}_one`, used when the count is exactly 1 ("1 item", "2
+ * itens"). Not Intl.PluralRules: for pt-BR it puts 0 in the singular too ("0 item"),
+ * and the screens say "0 itens".
+ */
+export function translate(language: Language, key: MessageKey, vars?: Record<string, string | number>) {
+  const one = vars?.count === 1 ? MESSAGES[language][`${key}_one` as MessageKey] : undefined;
+  return interpolate(one ?? MESSAGES[language][key] ?? key, vars);
+}
+
 /** "Nível {level}" with { level: 3 } → "Nível 3". A missing variable stays as written. */
 export function interpolate(message: string, vars: Record<string, string | number> = {}) {
   return message.replace(/\{(\w+)\}/g, (whole, name: string) => (name in vars ? String(vars[name]) : whole));

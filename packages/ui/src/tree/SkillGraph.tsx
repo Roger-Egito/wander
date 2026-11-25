@@ -23,13 +23,15 @@ import { inLanguage, type Skill } from '@wander/rules';
 import { useContent } from '../ContentProvider.tsx';
 import { useLanguage } from '../i18n/LanguageProvider.tsx';
 import { SkillCard } from '../cards/cards.tsx';
-import { layoutGraph, type Size } from './graph.ts';
+import { GRAPH_GAP, layoutGraph, type Size } from './graph.ts';
 import treeStyles from './SkillTree.module.css';
 import styles from './SkillGraph.module.css';
 
 /** Cards are this wide in the graph. Their height is measured. */
 export const GRAPH_CARD_WIDTH = 340;
 const UNMEASURED: Size = { width: GRAPH_CARD_WIDTH, height: 300 };
+/** Space around the first discipline when the graph opens. */
+const MARGIN = 24;
 
 type CardNode = Node<{ card: ReactNode }, 'card'>;
 type BandNode = Node<{ label: string }, 'band'>;
@@ -69,7 +71,8 @@ export function SkillGraph(props: SkillGraphProps) {
 function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} />, fullscreenTools }: SkillGraphProps) {
   const content = useContent();
   const { language, t } = useLanguage();
-  const { fitView } = useReactFlow();
+  const { setViewport } = useReactFlow();
+  const box = useRef<HTMLDivElement>(null);
   const [sizes, setSizes] = useState<Map<string, Size>>(new Map());
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -141,20 +144,27 @@ function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} />, fu
     });
   };
 
-  // Fit the whole graph once every card has been measured and placed, and again when the
-  // set of skills changes (a filter), but not when one card grows.
-  const fitted = useRef('');
+  // Once every card is measured and placed, and again when the set of skills changes (a
+  // filter) but not when one card grows: open on the first discipline at a size that
+  // reads, about three cards across on a wide screen and one on a phone, never past 100%.
+  // The whole graph zoomed out was unreadable and slow on a phone. Controls' fit button
+  // still shows everything.
+  const started = useRef('');
   const key = skills.map((s) => s.id).join(',');
   useEffect(() => {
-    if (!measured || fitted.current === key) return;
-    fitted.current = key;
-    requestAnimationFrame(() => void fitView({ padding: 0.05 }));
-  }, [measured, key, fitView]);
+    if (!measured || started.current === key || !layout.bands.length) return;
+    started.current = key;
+    const width = box.current?.clientWidth ?? 1000;
+    const across = width < 700 ? 1 : 3;
+    const zoom = Math.min(1, width / (across * (GRAPH_CARD_WIDTH + GRAPH_GAP.card) + 2 * MARGIN));
+    const first = layout.bands[0];
+    requestAnimationFrame(() => void setViewport({ x: MARGIN - first.x * zoom, y: MARGIN - first.y * zoom, zoom }));
+  }, [measured, key, layout, setViewport]);
 
   if (!skills.length) return <p className={treeStyles.empty}>{t('graph.empty')}</p>;
 
   return (
-    <div className={`${treeStyles.tree} ${styles.graph}`} data-fullscreen={fullscreen}>
+    <div ref={box} className={`${treeStyles.tree} ${styles.graph}`} data-fullscreen={fullscreen}>
       <ReactFlow
         nodes={nodes}
         edges={edges}

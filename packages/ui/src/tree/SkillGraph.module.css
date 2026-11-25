@@ -67,8 +67,13 @@
   color: var(--color-txt);
 }
 
-/* On a phone the tools take the width, under the full screen button. */
+/* On a phone the tools take the width, under the full screen button, and the map is small. */
 @media (max-width: 600px) {
+  .minimap svg {
+    width: 96px;
+    height: 72px;
+  }
+
   .toolsPanel {
     max-width: calc(100% - 30px);
     margin-top: 70px;
