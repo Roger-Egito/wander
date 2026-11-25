@@ -1,56 +1,17 @@
 /**
- * The profiles migration, run on a real Postgres (PGlite, in-process) and checked as the
- * roles the app uses. Supabase's own pieces the migration relies on (the auth schema,
- * auth.uid(), the anon and authenticated roles) are stood in for by a few lines below,
- * the way Supabase defines them: auth.uid() reads the signed-in user from the request's
- * JWT claims.
- *
- * Each test works as a person would through the Data API: SET ROLE authenticated with
- * their user ID as the JWT subject.
+ * The profiles migration, checked as the roles the app uses (see db.ts for the stand-in
+ * of Supabase's own pieces).
  */
-import { PGlite } from '@electric-sql/pglite';
-import { readdirSync, readFileSync } from 'node:fs';
+import type { PGlite } from '@electric-sql/pglite';
 import { beforeEach, describe, expect, test } from 'vitest';
-
-const SUPABASE_STAND_IN = `
-  create role anon nologin;
-  create role authenticated nologin;
-  create schema auth;
-  create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb not null default '{}');
-  create function auth.uid() returns uuid language sql stable as
-    $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
-  grant usage on schema public, auth to anon, authenticated;
-  grant execute on function auth.uid() to anon, authenticated;
-`;
-
-const MIGRATIONS = new URL('../migrations/', import.meta.url);
-const migrations = readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort();
-
-const ROGER = '00000000-0000-0000-0000-000000000001';
-const PLAYER = '00000000-0000-0000-0000-000000000002';
+import { freshDb, PLAYER, ROGER, runAs } from './db.ts';
 
 let db: PGlite;
-
 beforeEach(async () => {
-  db = new PGlite();
-  await db.exec(SUPABASE_STAND_IN);
-  // Someone who signed in before the migration ran: the backfill must cover them.
-  await db.query(`insert into auth.users (id, raw_user_meta_data) values ($1, '{"full_name": "Roger"}')`, [ROGER]);
-  for (const file of migrations) await db.exec(readFileSync(new URL(file, MIGRATIONS), 'utf8'));
-  await db.query(`insert into auth.users (id, raw_user_meta_data) values ($1, '{"name": "Kallista"}')`, [PLAYER]);
-  await db.query(`update public.profiles set is_admin = true where id = $1`, [ROGER]);
+  db = await freshDb();
 });
 
-/** Runs SQL as a signed-in person (or as anon with no user), then goes back to the owner. */
-async function as<T>(user: string | null, sql: string, params: unknown[] = []) {
-  await db.exec(`set role ${user ? 'authenticated' : 'anon'}`);
-  await db.query(`select set_config('request.jwt.claim.sub', $1, false)`, [user ?? '']);
-  try {
-    return (await db.query<T>(sql, params)).rows;
-  } finally {
-    await db.exec('reset role');
-  }
-}
+const as = <T>(user: string | null, sql: string, params: unknown[] = []) => runAs<T>(db, user, sql, params);
 
 describe('profiles', () => {
   test('Row Level Security is on', async () => {

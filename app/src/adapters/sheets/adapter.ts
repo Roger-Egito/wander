@@ -14,7 +14,7 @@
  *   - Values go in as typed values (stringValue, numberValue), never parsed, so text that
  *     starts with "=" stays text.
  */
-import { CONTENT_TYPES, englishKey, TABS, type ContentType, type Field, type Row, type TabName, type Tables } from '@wander/content';
+import { CONTENT_TYPES, englishKey, TABS, type ContentType, type Field, type LiveStatus, type Row, type TabName, type Tables } from '@wander/content';
 import { cellData, type CellInput, type CellValue, type Request, type SheetInfo, type SheetsTransport } from './transport.ts';
 
 /** A row as the Editor hands it over: column → value. Missing columns are left as they are. */
@@ -208,7 +208,7 @@ export class SheetsAdapter {
   }
 
   /** Brings a soft-deleted row back with the status the Editor picks. */
-  restore(typeId: string, id: string, status: 'draft' | 'playtest' | 'final' = 'draft') {
+  restore(typeId: string, id: string, status: LiveStatus = 'draft') {
     return this.update(typeId, id, { status });
   }
 

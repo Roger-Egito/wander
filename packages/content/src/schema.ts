@@ -50,8 +50,16 @@ export type Tables = Record<TabName, Row[]>;
 
 export const emptyTables = (): Tables => Object.fromEntries(Object.keys(TABS).map((name) => [name, []])) as unknown as Tables;
 
-/** Statuses a content row can have. deleted is a soft delete. */
-export const STATUS = ['draft', 'playtest', 'final', 'deleted'] as const;
+/**
+ * Statuses a content row can have, from the most private to the most public. Who sees
+ * each one is in visibility.ts: draft only in the Editor, alpha also for the Alpha
+ * group, playtest and official for everyone. deleted is a soft delete.
+ */
+export const STATUS = ['draft', 'alpha', 'playtest', 'official', 'deleted'] as const;
+export type Status = (typeof STATUS)[number];
+/** Every status but deleted: what a row can be set to, or restored as. */
+export type LiveStatus = Exclude<Status, 'deleted'>;
+export const LIVE_STATUSES = STATUS.filter((s): s is LiveStatus => s !== 'deleted');
 
 /** The games content can come from: Wander itself, or one it was adapted from. */
 export const SOURCES = ['Wander', 'Outward', 'WWN', 'Cairn', 'OSE'] as const;

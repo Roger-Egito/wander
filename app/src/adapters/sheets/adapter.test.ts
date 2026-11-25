@@ -106,8 +106,8 @@ describe('editing', () => {
 
   test('a bulk change sets the same columns on every selected row, in one write', async () => {
     const sheets = new FakeSheets(data());
-    await new SheetsAdapter(sheets).updateMany('skill', ['RAS-01', 'RAS-02'], { status: 'final' });
-    expect(sheets.rows('Skills').map((r) => r.status)).toEqual(['final', 'final']);
+    await new SheetsAdapter(sheets).updateMany('skill', ['RAS-01', 'RAS-02'], { status: 'official' });
+    expect(sheets.rows('Skills').map((r) => r.status)).toEqual(['official', 'official']);
     expect(sheets.sent).toHaveLength(1);
   });
 

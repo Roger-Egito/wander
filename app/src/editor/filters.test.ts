@@ -7,7 +7,7 @@ function tables() {
   const t = emptyTables();
   t.Skills.push(
     { id: 'ARC-01', name: 'Disparo Arcano', discipline_id: 'ARC', source: 'Wander', status: 'playtest' },
-    { id: 'FOG-01', name: 'Bola de Fogo', discipline_id: 'FOG', source: 'Wander', status: 'final' },
+    { id: 'FOG-01', name: 'Bola de Fogo', discipline_id: 'FOG', source: 'Wander', status: 'official' },
     { id: 'OUT-01', name: 'Explosão', discipline_id: 'OUT', source: 'Outward', status: 'draft' },
     { id: 'RAS-01', name: 'Apagada', discipline_id: 'RAS', source: 'Wander', status: 'deleted' },
   );
@@ -26,7 +26,7 @@ test('search matches the name or ID, ignoring case and accents', () => {
 });
 
 test('dropdown filters combine', () => {
-  expect(ids({ source: 'Wander', status: 'final' })).toEqual(['FOG-01']);
+  expect(ids({ source: 'Wander', status: 'official' })).toEqual(['FOG-01']);
   expect(ids({ discipline: 'ARC' })).toEqual(['ARC-01']);
-  expect(activeFilters({ ...NO_FILTERS, source: 'Wander', status: 'final', search: 'x' })).toBe(2);
+  expect(activeFilters({ ...NO_FILTERS, source: 'Wander', status: 'official', search: 'x' })).toBe(2);
 });

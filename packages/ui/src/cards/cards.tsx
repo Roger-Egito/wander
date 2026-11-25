@@ -3,6 +3,10 @@
  * compendium, the Editor's preview and the skill tree. Every text goes through the
  * chosen language (hand-written English, then the automatic translation, then
  * Portuguese), and every cost and requirement through @wander/rules' formatters.
+ *
+ * Skills and traits also say what inspired them (and, as a joke, what they were "stolen"
+ * from: game mechanics can't be stolen). Their designer notes show behind a button, but
+ * only where the caller opts in with `notes`, so a page decides whether players see them.
  */
 import type { ReactNode } from 'react';
 import {
@@ -21,7 +25,7 @@ function Card({ title, subtitle, status, children }: { title: string; subtitle?:
     <article className={styles.card}>
       <header className={styles.header}>
         <h3 className={styles.title}>{title}</h3>
-        {status && status !== 'final' && <span className={styles.badge} data-status={status}>{t(`status.${status}` as MessageKey)}</span>}
+        {status && status !== 'official' && <span className={styles.badge} data-status={status}>{t(`status.${status}` as MessageKey)}</span>}
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
       </header>
       {children}
@@ -64,9 +68,39 @@ function Modifiers({ modifiers }: { modifiers: Modifier[] }) {
   );
 }
 
+/** Opt-in designer notes: whether they're open, and what the card's button does. */
+export interface NotesControl {
+  open: boolean;
+  onToggle: () => void;
+}
+
+function Origins({ inspiredBy, stolenFrom }: { inspiredBy: string; stolenFrom: string }) {
+  const { t } = useLanguage();
+  if (!inspiredBy && !stolenFrom) return null;
+  return (
+    <dl className={styles.origins}>
+      {inspiredBy && <div><dt>{t('card.inspiredBy')}</dt><dd>{inspiredBy}</dd></div>}
+      {stolenFrom && <div><dt>{t('card.stolenFrom')}</dt><dd>{stolenFrom}</dd></div>}
+    </dl>
+  );
+}
+
+function Notes({ text, control }: { text: string; control?: NotesControl }) {
+  const { t } = useLanguage();
+  if (!control || !text.trim()) return null;
+  return (
+    <div className={styles.notes}>
+      <button type="button" className={styles.notesButton} aria-expanded={control.open} onClick={control.onToggle}>
+        {t('card.notes')}
+      </button>
+      {control.open && <div className={styles.notesText}><RichText text={text} /></div>}
+    </div>
+  );
+}
+
 /* --- skill ----------------------------------------------------------------------- */
 
-export function SkillCard({ skill }: { skill: Skill }) {
+export function SkillCard({ skill, notes }: { skill: Skill; notes?: NotesControl }) {
   const content = useContent();
   const { language, t } = useLanguage();
   const at = (field: string) => ({ tab: 'Skills' as const, id: skill.id, field });
@@ -95,6 +129,8 @@ export function SkillCard({ skill }: { skill: Skill }) {
       <p className={styles.description}>
         <RichText text={inLanguage(content, language, at('description'), skill.description, skill.description_en)} exclude={skill.id} />
       </p>
+      <Origins inspiredBy={skill.inspired_by} stolenFrom={skill.stolen_from} />
+      <Notes text={skill.notes} control={notes} />
     </Card>
   );
 }
@@ -120,7 +156,7 @@ export function ConditionCard({ condition }: { condition: Condition }) {
 
 /* --- trait ----------------------------------------------------------------------- */
 
-export function TraitCard({ trait }: { trait: Trait }) {
+export function TraitCard({ trait, notes }: { trait: Trait; notes?: NotesControl }) {
   const content = useContent();
   const { language, t } = useLanguage();
   const name = inLanguage(content, language, { tab: 'Traits', id: trait.id, field: 'name' }, trait.name, trait.name_en);
@@ -157,6 +193,8 @@ export function TraitCard({ trait }: { trait: Trait }) {
           );
         })}
       </ol>
+      <Origins inspiredBy={trait.inspired_by} stolenFrom={trait.stolen_from} />
+      <Notes text={inLanguage(content, language, { tab: 'Traits', id: trait.id, field: 'notes' }, trait.notes, trait.notes_en)} control={notes} />
     </Card>
   );
 }

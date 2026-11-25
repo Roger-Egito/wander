@@ -746,10 +746,6 @@
   gap: 12px;
 }
 
-.cardsView > div:first-child {
-  max-width: 900px;
-}
-
 /* As many 320px columns as fit, down to one full-width column on a phone. */
 .cardGrid {
   list-style: none;
@@ -769,6 +765,51 @@
   contain-intrinsic-size: auto 320px;
 }
 
+/* The card plus the Editor's checkbox and Editar button, in the Cards view and the graph. */
+.cardFrame {
+  position: relative;
+  border-radius: 10px;
+}
+
+.cardFrame[data-checked='true'] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.cardCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.cardCheck input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.cardTools {
+  display: grid;
+  gap: 8px;
+  max-width: 900px;
+}
+
+.cardToolsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
+
+/* The bulk actions open on their own line, under "select all" and the notes toggle. */
+.cardToolsRow > .bulk {
+  flex-basis: 100%;
+  order: 1;
+}
+
 .cardActions {
   position: absolute;
   top: 10px;
@@ -785,9 +826,9 @@
   font-size: 0.85rem;
 }
 
-/* Room for the Editar button in the card's top-right corner. */
-.cardCell header {
-  padding-right: 88px;
+/* Room for the checkbox and the Editar button in the card's top-right corner. */
+.cardFrame header {
+  padding-right: 136px;
 }
 
 /* In the Cards view the filters sit side by side, so the cards start higher. */

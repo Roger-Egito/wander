@@ -10,7 +10,7 @@ declare const e: Entities;
 export function typeChecks() {
   const s = e.skill[0];
   const level: number | null = s.level;
-  const status: 'draft' | 'playtest' | 'final' | 'deleted' = s.status;
+  const status: 'draft' | 'alpha' | 'playtest' | 'official' | 'deleted' = s.status;
   const unit: '' | 'Fadiga' | 'Motivação' | 'Ferida' = s.cost_unit;
   const categories: string[] = s.categories;
   const nameEn: string = s.name_en;

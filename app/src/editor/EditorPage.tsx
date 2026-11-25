@@ -18,8 +18,10 @@ import type { CellValue } from '../adapters/sheets/transport.ts';
 import { EditorDataProvider, useEditorData } from './EditorData.tsx';
 import { offline } from './offline.ts';
 import { changedValues, childrenChanged, draftFrom, emptyDraft, isDirty, mergeDraft, PENDING_ID, problemsFor, typeById, type Draft } from './draft.ts';
-import { BulkBar } from './bulk.tsx';
+import { SelectionTools } from './bulk.tsx';
+import { toggled, useOpenNotes } from './CardFrame.tsx';
 import { CardsView } from './CardsView.tsx';
+import { GraphView } from './GraphView.tsx';
 import { useSettled, useStableCallback } from './hooks.ts';
 import { filterRows, NO_FILTERS, type Filters } from './filters.ts';
 import { ListTools } from './ListTools.tsx';
@@ -31,7 +33,8 @@ import styles from './editor.module.css';
 
 const TYPES = CONTENT_TYPES as readonly ContentType[];
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value).trim());
-type View = 'list' | 'cards';
+type View = 'list' | 'cards' | 'graph';
+const VIEWS: View[] = ['list', 'cards', 'graph'];
 
 /** Two drafts are the same thing (not just two versions of it) when they're the same row of the same type. */
 const sameDraft = (a: { type: ContentType; draft: Draft } | null, b: { type: ContentType; draft: Draft } | null) =>
@@ -40,7 +43,8 @@ const VIEW_KEY = 'wander-editor-view';
 /** The view picked last time in this browser, else the list. */
 const savedView = (): View => {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'cards' ? 'cards' : 'list';
+    const saved = localStorage.getItem(VIEW_KEY);
+    return VIEWS.find((v) => v === saved) ?? 'list';
   } catch {
     return 'list';
   }
@@ -92,6 +96,12 @@ function Workspace({ tables }: { tables: Tables }) {
   const [screen, setScreen] = useState<'type' | 'translations'>('type');
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
   const [view, setView] = useState<View>(savedView);
+  // The selection and the open designer notes are shared by every view, so switching
+  // between the list, the cards and the graph keeps them.
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const notes = useOpenNotes();
+  // A selection doesn't carry over between the live rows and the Trash.
+  useEffect(() => setChecked(new Set()), [filters.trash]);
   const chooseView = (next: View) => {
     setView(next);
     try {
@@ -101,6 +111,9 @@ function Workspace({ tables }: { tables: Tables }) {
     }
   };
   const type = typeById(typeId);
+  // Only skills point at each other, so the graph is a skills view. Other types show
+  // their cards instead, and come back to the graph when you return to skills.
+  const shown: View = view === 'graph' && type.id !== 'skill' ? 'cards' : view;
   /** Edits that would be lost: what the leave warning asks about. */
   const changed = !!saved && !!draft && isDirty(saved, draft);
   // A new row can be saved even before anything is typed (a keyword made from a candidate arrives filled in).
@@ -140,6 +153,7 @@ function Workspace({ tables }: { tables: Tables }) {
     if (!leave()) return;
     setScreen('type');
     setFilters(NO_FILTERS);
+    setChecked(new Set());
     setTypeId(id);
     setSaved(null);
     setDraft(null);
@@ -211,6 +225,7 @@ function Workspace({ tables }: { tables: Tables }) {
     };
   }, [save, changed]);
 
+  const cardProps = { type, tables, problems: allProblems, filters, onFilters: setFilters, checked, onChecked: setChecked, notes, onOpen: openFromCards, onCreate: createFromCards, onBulkDone: stableAfterBulk };
   const status = saveState.kind === 'saving' ? t('editor.saving') : saveState.kind === 'error' ? t('editor.error', { message: saveState.message }) : dirty ? t('editor.unsaved') : saveState.kind === 'saved' ? t('editor.saved') : '';
 
   return (
@@ -228,23 +243,23 @@ function Workspace({ tables }: { tables: Tables }) {
         </div>
         {screen === 'type' && (
           <div className={styles.viewToggle} role="group" aria-label={t('editor.view')}>
-            {(['list', 'cards'] as View[]).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => chooseView(v)}>{t(v === 'list' ? 'editor.viewList' : 'editor.viewCards')}</button>
+            {VIEWS.filter((v) => v !== 'graph' || type.id === 'skill').map((v) => (
+              <button key={v} type="button" aria-pressed={shown === v} onClick={() => chooseView(v)}>
+                {t(v === 'list' ? 'editor.viewList' : v === 'cards' ? 'editor.viewCards' : 'editor.viewGraph')}
+              </button>
             ))}
           </div>
         )}
         <PublishButton tables={tables} />
-        {/* In the Cards view, Save shows only when a draft is waiting to be saved. */}
-        {screen === 'type' && (view === 'list' || dirty) && <div className={styles.saveBar}>
+        {/* In the Cards and graph views, Save shows only when a draft is waiting to be saved. */}
+        {screen === 'type' && (shown === 'list' || dirty) && <div className={styles.saveBar}>
           <span className={styles.status} data-kind={saveState.kind === 'error' ? 'error' : dirty ? 'dirty' : 'clean'} role="status">{status}</span>
           {dirty && <button type="button" className={styles.secondary} onClick={() => saved && setDraft(structuredClone(saved))}>{t('editor.discard')}</button>}
           <button type="button" className={styles.primary} onClick={save} disabled={!dirty || saveState.kind === 'saving'}>{t('editor.save')}</button>
         </div>}
       </div>
 
-      {screen === 'translations' ? <TranslationScreen tables={tables} /> : view === 'cards' ? (
-        <CardsView type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} onOpen={openFromCards} onCreate={createFromCards} />
-      ) : <>
+      {screen === 'translations' ? <TranslationScreen tables={tables} /> : shown === 'graph' ? <GraphView {...cardProps} /> : shown === 'cards' ? <CardsView {...cardProps} /> : <>
 
       <nav className={styles.paneTabs} aria-label="panes">
         {(['list', 'edit', 'preview'] as Pane[]).map((p) => (
@@ -256,7 +271,7 @@ function Workspace({ tables }: { tables: Tables }) {
 
       <div className={styles.panes} data-pane={pane}>
         <section className={styles.listPane} aria-label={t('editor.tabList')}>
-          <List key={type.id} type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} selected={text(draft?.values.id)} onSelect={stableSelect} onCreate={stableCreate} onBulkDone={stableAfterBulk} />
+          <List key={type.id} type={type} tables={tables} problems={allProblems} filters={filters} onFilters={setFilters} checked={checked} onChecked={setChecked} selected={text(draft?.values.id)} onSelect={stableSelect} onCreate={stableCreate} onBulkDone={stableAfterBulk} />
         </section>
         <section className={styles.formPane} aria-label={t('editor.tabEdit')}>
           {draft ? <Form type={type} tables={tables} draft={draft} problems={problems} onChange={setDraft} isNew={saved?.values.id === PENDING_ID} /> : <p className={styles.empty}>{t('editor.noSelection')}</p>}
@@ -272,12 +287,14 @@ function Workspace({ tables }: { tables: Tables }) {
 
 /* --- list ------------------------------------------------------------------------ */
 
-const List = memo(function List({ type, tables, problems, filters, onFilters, selected, onSelect, onCreate, onBulkDone }: {
+const List = memo(function List({ type, tables, problems, filters, onFilters, checked, onChecked, selected, onSelect, onCreate, onBulkDone }: {
   type: ContentType;
   tables: Tables;
   problems: Problem[];
   filters: Filters;
   onFilters: (filters: Filters) => void;
+  checked: Set<string>;
+  onChecked: (checked: Set<string>) => void;
   selected: string;
   onSelect: (id: string) => void;
   onCreate: (defaults?: RowValues) => void;
@@ -285,16 +302,7 @@ const List = memo(function List({ type, tables, problems, filters, onFilters, se
 }) {
   const { t } = useLanguage();
   const { trash } = filters;
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => setChecked((all) => {
-    const next = new Set(all);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    return next;
-  });
   const has = (key: string) => type.fields.some((f) => f.key === key);
-  // A selection doesn't carry over between the live rows and the Trash.
-  useEffect(() => setChecked(new Set()), [trash]);
   const counts = useMemo(() => {
     const byId = new Map<string, number>();
     for (const p of problems) byId.set(p.id, (byId.get(p.id) ?? 0) + 1);
@@ -308,21 +316,7 @@ const List = memo(function List({ type, tables, problems, filters, onFilters, se
       <div className={styles.listTools}>
         <ListTools type={type} tables={tables} filters={filters} onFilters={onFilters} count={rows.length} onCreate={() => onCreate()} />
         {type.id === 'keyword' && !trash && <Candidates tables={tables} onCreate={(name, variants) => onCreate({ name_pt: name, variants_pt: variants.join(', ') })} />}
-        {rows.length > 0 && (
-          <button type="button" className={styles.linkButton} onClick={() => setChecked(new Set(rows.map((r) => text(r.id))))}>
-            {t('editor.selectAll', { count: rows.length })}
-          </button>
-        )}
-        {checked.size > 0 && (
-          <BulkBar
-            type={type}
-            tables={tables}
-            ids={[...checked]}
-            trash={trash}
-            onClear={() => setChecked(new Set())}
-            onDone={(ids, fresh, removed) => { setChecked(new Set()); onBulkDone(ids, fresh, removed); }}
-          />
-        )}
+        <SelectionTools type={type} tables={tables} rowIds={rows.map((r) => text(r.id))} checked={checked} onChecked={onChecked} trash={trash} onBulkDone={onBulkDone} />
       </div>
       <ul className={styles.rows}>
         {rows.map((r) => {
@@ -331,14 +325,14 @@ const List = memo(function List({ type, tables, problems, filters, onFilters, se
           return (
             <li key={id} className={styles.rowWrap}>
               <label className={styles.rowCheck}>
-                <input type="checkbox" checked={checked.has(id)} onChange={() => toggle(id)} aria-label={t('editor.select', { name: text(r[type.nameKey]) || id })} />
+                <input type="checkbox" checked={checked.has(id)} onChange={() => onChecked(toggled(checked, id))} aria-label={t('editor.select', { name: text(r[type.nameKey]) || id })} />
               </label>
               <button type="button" className={styles.row} aria-current={id === selected || undefined} onClick={() => onSelect(id)}>
                 <span className={styles.rowName}>{text(r[type.nameKey]) || '—'}</span>
                 <span className={styles.rowMeta}>
                   {id}
                   {type.listColumns.filter((c) => c !== 'status').map((c) => ` · ${text(r[c])}`)}
-                  {has('status') && r.status !== 'final' && <span className={styles.badge}> {t(`status.${text(r.status) || 'draft'}` as 'status.draft')}</span>}
+                  {has('status') && r.status !== 'official' && <span className={styles.badge}> {t(`status.${text(r.status) || 'draft'}` as 'status.draft')}</span>}
                 </span>
                 {n > 0 && <span className={styles.problemBadge} title={t('editor.problemCount', { count: n })}>{n}</span>}
               </button>

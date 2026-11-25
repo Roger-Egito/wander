@@ -9,4 +9,6 @@ export * from './StatValue.tsx';
 export * from './cards/cards.tsx';
 export * from './tree/layout.ts';
 export * from './tree/SkillTree.tsx';
+export * from './tree/graph.ts';
+export * from './tree/SkillGraph.tsx';
 export * from './Toggles.tsx';

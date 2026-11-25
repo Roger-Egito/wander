@@ -1,5 +1,5 @@
 /**
- * A discipline's skills as a tree (React Flow): one column per level, arrows from each
+ * A discipline's skills as a tree (React Flow): one row per level, arrows down from each
  * prerequisite to the skill that needs it, dashed when it's one of several alternatives.
  * Each node shows the name, cost and stat requirement. Selecting a node tells the
  * parent, which shows that skill's card.
@@ -19,11 +19,11 @@ type SkillNode = Node<SkillNodeData, 'skill'>;
 function SkillNodeView({ data }: NodeProps<SkillNode>) {
   return (
     <div className={styles.node} data-taken={data.taken} data-selected={data.selected}>
-      <Handle type="target" position={Position.Left} className={styles.handle} />
+      <Handle type="target" position={Position.Top} className={styles.handle} />
       <strong className={styles.name}>{data.name}</strong>
       {(data.cost || data.stats) && <span className={styles.meta}>{[data.stats, data.cost].filter(Boolean).join(' · ')}</span>}
       {data.note && <span className={styles.note}>{data.note}</span>}
-      <Handle type="source" position={Position.Right} className={styles.handle} />
+      <Handle type="source" position={Position.Bottom} className={styles.handle} />
     </div>
   );
 }

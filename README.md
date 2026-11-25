@@ -68,6 +68,13 @@ signed in once:
 update public.profiles set is_admin = true where id = (select id from auth.users where email = '...');
 ```
 
+The Alpha group also sees content marked `alpha`, published to a private Storage bucket.
+Add someone the same way:
+
+```sql
+update public.profiles set is_alpha = true where id = (select id from auth.users where email = '...');
+```
+
 **Sheet script.** Log in with `npx @google/clasp login`, turn on the Apps Script API in
 your Google account, then push with `npm run push -w sheet-script`. In the sheet, run
 "Wander > Ativar backup semanal" once.

@@ -7,3 +7,4 @@ export * from './checks.ts';
 export * from './validate.ts';
 export * from './sheet-validation.ts';
 export * from './entity.ts';
+export * from './visibility.ts';

@@ -1,11 +1,12 @@
 /**
- * Bulk actions on the rows selected in the list: move to the Trash, change status, set
- * one field, and in the Trash restore or delete permanently. Every action asks first,
+ * Bulk actions on the rows selected in any Editor view (list, cards or graph): move to
+ * the Trash, change status, set one field, and in the Trash restore or delete
+ * permanently. Every action asks first,
  * listing the rows, what points at them, and (for a permanent delete) what goes with
  * them. Each action is one write to the sheet.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { ContentType, Field, Tables } from '@wander/content';
+import { LIVE_STATUSES, type ContentType, type Field, type Tables } from '@wander/content';
 import { useLanguage } from '@wander/ui';
 import type { CellValue } from '../adapters/sheets/transport.ts';
 import { dependentsOf, goesWith } from './dependents.ts';
@@ -21,11 +22,46 @@ type Action =
   | { kind: 'forever' };
 
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value).trim());
-const LIVE = ['draft', 'playtest', 'final'];
 
 /** Fields a bulk edit can set: plain values, not names (they must stay unique), texts or child rows. */
 const editable = (type: ContentType) =>
   type.fields.filter((f) => !f.system && f.key !== type.nameKey && f.key !== 'status' && f.type !== 'subtable' && f.type !== 'modifiers' && f.type !== 'richtext');
+
+/**
+ * "Selecionar todos" and, once something is checked, the bulk actions. The selection
+ * itself belongs to the Workspace, so it's the same in every view.
+ */
+export function SelectionTools({ type, tables, rowIds, checked, onChecked, trash, onBulkDone }: {
+  type: ContentType;
+  tables: Tables;
+  /** The rows the filters show, which "select all" selects. */
+  rowIds: string[];
+  checked: Set<string>;
+  onChecked: (checked: Set<string>) => void;
+  trash: boolean;
+  onBulkDone: (ids: string[], fresh: Tables | null, removed: boolean) => void;
+}) {
+  const { t } = useLanguage();
+  return (
+    <>
+      {rowIds.length > 0 && (
+        <button type="button" className={styles.linkButton} onClick={() => onChecked(new Set(rowIds))}>
+          {t('editor.selectAll', { count: rowIds.length })}
+        </button>
+      )}
+      {checked.size > 0 && (
+        <BulkBar
+          type={type}
+          tables={tables}
+          ids={[...checked]}
+          trash={trash}
+          onClear={() => onChecked(new Set())}
+          onDone={(ids, fresh, removed) => { onChecked(new Set()); onBulkDone(ids, fresh, removed); }}
+        />
+      )}
+    </>
+  );
+}
 
 export function BulkBar({ type, tables, ids, trash, onClear, onDone }: {
   type: ContentType;
@@ -71,7 +107,7 @@ export function BulkBar({ type, tables, ids, trash, onClear, onDone }: {
 
   const statusSelect = (value: string, set: (v: string) => void, label: string) => (
     <select className={styles.input} aria-label={label} value={value} onChange={(e) => set(e.target.value)}>
-      {LIVE.map((s) => <option key={s} value={s}>{t(`status.${s}` as 'status.draft')}</option>)}
+      {LIVE_STATUSES.map((s) => <option key={s} value={s}>{t(`status.${s}` as 'status.draft')}</option>)}
     </select>
   );
 

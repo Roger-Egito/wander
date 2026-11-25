@@ -7,11 +7,10 @@
  *
  * Read-only: nothing here writes back to the sheet.
  */
-import { loadEntities, num, text, type Entities, type Entity, type LoadOptions, type Modifier, type Row, type Stat, type Tables, type TabName, type TypeOf, type STATUS } from '@wander/content';
+import { loadEntities, num, text, type Entities, type Entity, type LoadOptions, type Modifier, type Row, type Stat, type Tables, type TabName, type TypeOf } from '@wander/content';
 
-export type { LoadOptions, Modifier };
+export type { LoadOptions, Modifier, Status } from '@wander/content';
 export type Language = 'pt' | 'en';
-export type Status = (typeof STATUS)[number];
 
 export type Discipline = Entity<TypeOf<'discipline'>>;
 export type Skill = Entity<TypeOf<'skill'>>;

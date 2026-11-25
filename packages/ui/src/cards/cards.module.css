@@ -156,3 +156,65 @@
   font-size: 0.85rem;
   margin-bottom: 2px;
 }
+
+/* What inspired the design, small and quiet at the bottom. */
+.origins {
+  margin: 12px 0 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.origins div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 6px;
+}
+
+.origins dt {
+  color: var(--color-muted);
+}
+
+.origins dt::after {
+  content: ':';
+}
+
+.origins dd {
+  margin: 0;
+}
+
+.notes {
+  margin-top: 12px;
+  border-top: 1px dashed var(--color-border);
+  padding-top: 8px;
+}
+
+.notesButton {
+  min-height: 36px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--color-txt);
+  background: var(--color-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.notesButton::before {
+  content: '▸ ';
+  color: var(--color-muted);
+}
+
+.notesButton[aria-expanded='true']::before {
+  content: '▾ ';
+}
+
+.notesText {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--color-accent);
+  background: var(--color-sunken);
+  border-radius: 0 6px 6px 0;
+  white-space: pre-line;
+}
