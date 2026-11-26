@@ -54,7 +54,7 @@ export function FieldInput({ field, value, onChange, tables, problems = [], comp
   const { language, t } = useLanguage();
   const id = useId();
   const label = field.label[language];
-  const options = optionsFor(field, tables);
+  const options = optionsFor(field, tables, language);
   let control;
 
   if (field.type === 'richtext') {

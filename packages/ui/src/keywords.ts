@@ -4,7 +4,9 @@
  * Terms are each keyword's name and variants, plus the names of every content type
  * marked keywordSource in the registry (skills, conditions), so a new condition is a
  * keyword everywhere without a Keywords row. Matching:
- *   - ignores case ("fadiga" finds Fadiga),
+ *   - needs the capitals the term has (decided 2026-11-26): "Fadiga" and "FADIGA" link,
+ *     "fadiga" doesn't, since game terms are capitalized in the rules. Words written in
+ *     lowercase in the term ("Dano de Fogo") match in any case,
  *   - only takes whole words ("Alvo" doesn't match inside "Alvorada"),
  *   - prefers the longest term ("Descanso Longo" over "Descanso"),
  *   - links each term once per text, the first time it appears, so a paragraph that
@@ -87,6 +89,15 @@ function patternFor(terms: Term[]) {
   return pattern;
 }
 
+const words = (text: string) => text.split(/[\s-]+/u).filter(Boolean);
+const startsUpper = (word: string) => word[0] !== word[0].toLowerCase();
+
+/** Whether every word the term capitalizes is capitalized in the text too. */
+function capitalizedLike(found: string, term: string) {
+  const [a, b] = [words(found), words(term)];
+  return a.length === b.length && b.every((word, i) => !startsUpper(word) || startsUpper(a[i]));
+}
+
 /**
  * The text cut into plain strings and matched terms. `exclude` skips one row's own name
  * (a skill's description saying its name doesn't link to itself).
@@ -95,15 +106,39 @@ export function splitKeywords(text: string, terms: Term[], exclude?: string): Se
   const byText = lookupFor(terms);
   const linked = new Set<string>();
   const segments: Segment[] = [];
+  const pattern = patternFor(terms);
+  pattern.lastIndex = 0;
   let last = 0;
-  for (const match of text.matchAll(patternFor(terms))) {
-    const term = byText.get(fold(match[0]));
-    if (!term || term.id === exclude || linked.has(`${term.type}:${term.id}`)) continue;
-    linked.add(`${term.type}:${term.id}`);
+  for (let match = pattern.exec(text); match; match = pattern.exec(text)) {
+    // The regex ignores case, so it finds the longest term whatever its capitals. When
+    // those don't fit ("Descanso longo"), a shorter term at the same spot may ("Descanso").
+    let found: { text: string; term: Term } | null = { text: match[0], term: byText.get(fold(match[0]))! };
+    if (!found.term || !capitalizedLike(found.text, found.term.text)) found = shorterAt(text, match.index, terms);
+    if (!found) continue;
+    pattern.lastIndex = match.index + found.text.length;
+    const key = `${found.term.type}:${found.term.id}`;
+    if (found.term.id === exclude || linked.has(key)) continue;
+    linked.add(key);
     if (match.index > last) segments.push(text.slice(last, match.index));
-    segments.push({ text: match[0], term });
-    last = match.index + match[0].length;
+    segments.push(found);
+    last = match.index + found.text.length;
   }
   if (last < text.length) segments.push(text.slice(last));
   return segments;
+}
+
+const byLength = new WeakMap<Term[], Term[]>();
+const wordChar = /[\p{L}\p{N}]/u;
+
+/** The longest term written at `index` with its capitals, ending at a word's end. */
+function shorterAt(text: string, index: number, terms: Term[]) {
+  let sorted = byLength.get(terms);
+  if (!sorted) byLength.set(terms, (sorted = [...terms].sort((a, b) => b.text.length - a.text.length)));
+  for (const term of sorted) {
+    const piece = text.slice(index, index + term.text.length);
+    if (fold(piece) !== fold(term.text) || !capitalizedLike(piece, term.text)) continue;
+    if (wordChar.test(text[index + term.text.length] ?? '')) continue;
+    return { text: piece, term };
+  }
+  return null;
 }

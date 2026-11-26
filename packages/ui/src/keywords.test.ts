@@ -24,8 +24,24 @@ describe('finding keywords', () => {
   const c = content();
   const pt = keywordTerms(c, 'pt');
 
-  test('the longest term wins, and case is ignored', () => {
-    expect(show(splitKeywords('Após um descanso longo, você recupera.', pt))).toBe('Após um [descanso longo], você recupera.');
+  test('the longest term wins', () => {
+    expect(show(splitKeywords('Após um Descanso Longo, você recupera.', pt))).toBe('Após um [Descanso Longo], você recupera.');
+  });
+
+  test('a term needs its capitals: lowercase text is plain', () => {
+    expect(show(splitKeywords('Após um descanso longo, gaste fadiga.', pt))).toBe('Após um descanso longo, gaste fadiga.');
+    // Half capitalized isn't the term either, but the shorter capitalized term still links.
+    expect(show(splitKeywords('Após um Descanso longo.', pt))).toBe('Após um [Descanso] longo.');
+    // All capitals still read as the term.
+    expect(show(splitKeywords('GASTE FADIGA.', pt))).toBe('GASTE [FADIGA].');
+  });
+
+  test('lowercase words of a term match in any case', () => {
+    expect(show(splitKeywords('Lance uma Bola De Fogo e outra Bola de Fogo.', pt))).toBe('Lance uma [Bola De Fogo] e outra Bola de Fogo.');
+  });
+
+  test('a lowercase use does not use up the link for the capitalized one', () => {
+    expect(show(splitKeywords('Sem fadiga agora, mas depois Fadiga.', pt))).toBe('Sem fadiga agora, mas depois [Fadiga].');
   });
 
   test('only whole words match', () => {

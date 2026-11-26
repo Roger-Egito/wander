@@ -32,7 +32,7 @@ export function FilterSelects({ type, tables, filters, onFilters }: FilterProps)
   const select = (key: string, value: string, patch: (v: string) => Partial<Filters>, all: string) => (
     <select className={styles.input} value={value} onChange={(e) => set(patch(e.target.value))} aria-label={field(key).label[language]}>
       <option value="">{all}</option>
-      <Options options={(optionsFor(field(key), tables) ?? []).filter((o) => o.value !== 'deleted')} />
+      <Options options={(optionsFor(field(key), tables, language) ?? []).filter((o) => o.value !== 'deleted')} />
     </select>
   );
   return (
