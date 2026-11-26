@@ -11,8 +11,8 @@ import { COST_UNITS, SOURCES, STATUS } from './schema.ts';
 const status = { key: 'status', type: 'enum', options: STATUS, required: true, label: label('Status', 'Status') } as const satisfies Field;
 const source = { key: 'source', type: 'enum', options: SOURCES, required: true, label: label('Fonte', 'Source') } as const satisfies Field;
 const name = { key: 'name', type: 'text', required: true, unique: true, translatable: true, label: label('Nome', 'Name') } as const satisfies Field;
-const inspiredBy = { key: 'inspired_by', type: 'text', label: label('Inspirado em', 'Inspired by') } as const satisfies Field;
-const stolenFrom = { key: 'stolen_from', type: 'text', label: label('Roubado de', 'Stolen from') } as const satisfies Field;
+const inspiredBy = { key: 'inspired_by', type: 'text', designer: true, label: label('Inspirado em', 'Inspired by') } as const satisfies Field;
+const stolenFrom = { key: 'stolen_from', type: 'text', designer: true, label: label('Roubado de', 'Stolen from') } as const satisfies Field;
 const description = (recommended = true) =>
   ({ key: 'description', type: 'richtext', minLength: 4, recommended, translatable: true, label: label('Descrição', 'Description') }) as const satisfies Field;
 const modifiers = { key: 'modifiers', type: 'modifiers', label: label('Modificadores', 'Modifiers') } as const satisfies Field;
@@ -75,7 +75,7 @@ export const skill = defineContentType({
     { key: 'cost2_value', type: 'number', min: 0, label: label('Segundo custo', 'Second cost') },
     { key: 'cost2_unit', type: 'enum', options: COST_UNITS, label: label('Unidade do segundo custo', 'Second cost unit') },
     description(),
-    { key: 'notes', type: 'richtext', label: label('Notas', 'Notes') },
+    { key: 'notes', type: 'richtext', designer: true, label: label('Notas', 'Notes') },
     inspiredBy,
     stolenFrom,
     source,
@@ -112,7 +112,7 @@ export const trait = defineContentType({
   listColumns: ['source', 'status'],
   fields: [
     name,
-    { key: 'notes', type: 'richtext', translatable: true, label: label('Notas', 'Notes') },
+    { key: 'notes', type: 'richtext', translatable: true, designer: true, label: label('Notas', 'Notes') },
     inspiredBy,
     stolenFrom,
     source,

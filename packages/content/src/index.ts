@@ -8,3 +8,5 @@ export * from './validate.ts';
 export * from './sheet-validation.ts';
 export * from './entity.ts';
 export * from './visibility.ts';
+export * from './versions.ts';
+export * from './rows.ts';

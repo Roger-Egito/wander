@@ -1,0 +1,68 @@
+# Publishes the newest release in Wander Data ("Publicar versão" in the Editor) when it's
+# higher than the one on the site: checks the content, commits the public snapshot to
+# app/public/data, uploads the Alpha group's snapshot to the private Storage bucket, and
+# deploys the site. Nothing is written back to the sheet.
+#
+# A commit made here doesn't start the Deploy workflow on its own (GitHub doesn't let a
+# workflow's commits start other workflows), so this one runs Deploy itself.
+#
+# Google login has no key: Workload Identity Federation trusts runs from this repository
+# and lends them the view-only service account (google-github-actions/auth). Its two
+# names are repository variables: GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT.
+name: Publish
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
+      version: ${{ steps.publish.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - id: google
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/spreadsheets.readonly
+      - id: publish
+        run: node tools/publish/src/main.ts
+        env:
+          WANDER_DATA_ID: 11udxO7nqDL_G4JkQbxD33g8QMR9KgMxPk_6XaCGBqvM
+          GOOGLE_ACCESS_TOKEN: ${{ steps.google.outputs.access_token }}
+          SUPABASE_URL: https://afoxmfmhwgrfhogeyvbh.supabase.co
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      - if: steps.publish.outputs.published == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/public/data
+          git commit -m "Publish ${{ steps.publish.outputs.version }}"
+          git push
+
+  deploy:
+    needs: publish
+    if: needs.publish.outputs.published == 'true'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy.yml

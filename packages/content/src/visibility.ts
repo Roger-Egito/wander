@@ -19,8 +19,11 @@
  *     from the Editor's, so each one is reported in `lostLinks`.
  *   - Lookup tabs and releases are visible. Config keeps only the display settings, and
  *     every other tab (Validation, anything added later) stays hidden until listed here.
+ *   - Designer-only fields (`designer: true` in the content types: notes, what inspired a
+ *     row) and their English and Translations rows are left out for the public
+ *     (decided 2026-11-26). The Alpha group keeps them.
  */
-import type { ContentType, Field } from './define.ts';
+import { englishKey, type ContentType, type Field } from './define.ts';
 import { emptyTables, type Row, type Status, type TabName, type Tables } from './schema.ts';
 import { CONTENT_TYPES } from './types.ts';
 
@@ -29,6 +32,9 @@ export const AUDIENCES = {
   alpha: ['alpha', 'playtest', 'official'],
 } as const satisfies Record<string, readonly Status[]>;
 export type Audience = keyof typeof AUDIENCES;
+
+/** Whether an audience gets the designer-only fields. */
+export const SEES_DESIGNER_FIELDS: Record<Audience, boolean> = { public: false, alpha: true };
 
 const SHARED_TABS: readonly TabName[] = ['Stats', 'CastTimes', 'CostScales', 'Categories', 'TraitTiers', 'Releases'];
 const SHARED_CONFIG = ['req_display'];
@@ -156,5 +162,28 @@ export function visibleTables(data: Tables, audience: Audience): VisibleContent 
   tables.Translations = data.Translations.filter((r) => kept.has(`${text(r.table)}|${fold(r.id)}`));
   for (const tab of SHARED_TABS) tables[tab] = [...data[tab]];
   tables.Config = data.Config.filter((r) => SHARED_CONFIG.includes(text(r.key)));
+  if (!SEES_DESIGNER_FIELDS[audience]) dropDesignerFields(tables);
   return { tables, withheld, lostLinks };
+}
+
+/** Each tab's designer-only columns, English ones included, read from the content types. */
+function designerColumns() {
+  const columns = new Map<TabName, string[]>();
+  const walk = (tab: TabName, fields: readonly Field[]) => {
+    for (const f of fields) {
+      if (f.type === 'subtable') walk(f.tab, f.fields);
+      else if (f.designer) columns.set(tab, [...(columns.get(tab) ?? []), f.key, ...(f.translatable ? [englishKey(f)] : [])]);
+    }
+  };
+  for (const type of TYPES) walk(type.tab, type.fields);
+  return columns;
+}
+
+/** Removes the designer-only columns from copies of the rows, and their Translations rows. */
+function dropDesignerFields(tables: Tables) {
+  const columns = designerColumns();
+  for (const [tab, keys] of columns) {
+    tables[tab] = tables[tab].map((row) => Object.fromEntries(Object.entries(row).filter(([key]) => !keys.includes(key))));
+  }
+  tables.Translations = tables.Translations.filter((r) => !columns.get(text(r.table) as TabName)?.includes(text(r.field)));
 }

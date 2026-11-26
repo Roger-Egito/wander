@@ -31,6 +31,11 @@ interface FieldBase {
   translatable?: boolean | { en: string };
   /** Kept by the app (edited_at, tree positions), never shown in the form. */
   system?: boolean;
+  /**
+   * Designer-only (notes, what inspired it): left out of the public snapshot. The Editor
+   * and the Alpha group's snapshot keep it.
+   */
+  designer?: boolean;
 }
 
 export type Field = FieldBase &

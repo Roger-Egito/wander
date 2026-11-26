@@ -1,11 +1,13 @@
 # Every push to main: the same checks, then the app is built and published to GitHub
-# Pages at roger-egito.github.io/<repository>/.
+# Pages at roger-egito.github.io/<repository>/. The Publish workflow also runs it after
+# committing a new content snapshot.
 name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  workflow_call:
 
 # One deploy at a time. A newer push waits for the running deploy instead of cancelling
 # it halfway.
@@ -21,7 +23,11 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
+      # The latest main, not the commit that started the run: when Publish calls this,
+      # its snapshot commit came after that one.
       - uses: actions/checkout@v7
+        with:
+          ref: main
       - uses: actions/setup-node@v7
         with:
           node-version: 24

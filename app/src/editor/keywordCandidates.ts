@@ -93,21 +93,3 @@ export function keywordCandidates(content: Content): Candidate[] {
   }
   return [...merged.values()].sort((a, b) => b.count - a.count || a.phrase.localeCompare(b.phrase, 'pt'));
 }
-
-/** The first version while Wander is in playtest: 0.x is "still in development" in Semantic Versioning, and the label says it outright. */
-export const FIRST_VERSION = '0.1.0-beta';
-
-/**
- * The next content release: a patch bump of the highest version so far, keeping its
- * label ("0.1.3-beta" → "0.1.4-beta"). Leaving beta means typing "1.0.0" once.
- */
-export function nextVersion(versions: string[]): string {
-  const parsed = versions
-    .map((v) => /^(\d+)\.(\d+)\.(\d+)(-[0-9A-Za-z.-]+)?$/.exec(v.trim()))
-    .filter((m): m is RegExpExecArray => !!m)
-    .map((m) => ({ numbers: m.slice(1, 4).map(Number), label: m[4] ?? '' }));
-  if (!parsed.length) return FIRST_VERSION;
-  const [highest] = parsed.sort((a, b) => b.numbers[0] - a.numbers[0] || b.numbers[1] - a.numbers[1] || b.numbers[2] - a.numbers[2]);
-  const [major, minor, patch] = highest.numbers;
-  return `${major}.${minor}.${patch + 1}${highest.label}`;
-}

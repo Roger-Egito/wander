@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { emptyTables } from '@wander/content';
 import { loadContent } from '@wander/rules';
-import { keywordCandidates, nextVersion, phrasesIn } from './keywordCandidates.ts';
+import { keywordCandidates, phrasesIn } from './keywordCandidates.ts';
 import { stateOf, translationEntries } from './translations.ts';
 
 describe('translation entries', () => {
@@ -55,11 +55,4 @@ describe('keyword candidates', () => {
       { phrase: 'Teste de Físico', variants: [], count: 1, examples: ['CON-03'] },
     ]);
   });
-});
-
-test('the next version is a patch bump of the highest one, keeping the beta label', () => {
-  expect(nextVersion([])).toBe('0.1.0-beta');
-  expect(nextVersion(['0.1.0-beta', '0.1.3-beta', 'rascunho'])).toBe('0.1.4-beta');
-  // After leaving beta by typing 1.0.0, the label is gone for good.
-  expect(nextVersion(['0.1.4-beta', '1.0.0'])).toBe('1.0.1');
 });

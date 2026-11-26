@@ -1,0 +1,12 @@
+{
+  "name": "@wander/publish",
+  "private": true,
+  "type": "module",
+  "description": "The snapshot workflow's script: reads Wander Data, builds each audience's snapshot and publishes it.",
+  "scripts": {
+    "publish-release": "node src/main.ts"
+  },
+  "dependencies": {
+    "@wander/content": "*"
+  }
+}

@@ -163,6 +163,23 @@ describe('visibleTables', () => {
     expect(tables.Validation).toEqual([]);
   });
 
+  test('designer notes and what inspired a row stay out of the public snapshot only', () => {
+    const t = data();
+    Object.assign(t.Skills[0], { notes: 'Ideia: mais forte no B2.', inspired_by: 'WWN', stolen_from: 'Outward' });
+    Object.assign(t.Traits[0], { notes: 'Rever o custo.', notes_en: 'Revisit the cost.' });
+    t.Translations.push({ table: 'Traits', id: 'FAC-01', field: 'notes', auto_en: 'Review the cost.' });
+    const pub = visibleTables(t, 'public').tables;
+    for (const key of ['notes', 'inspired_by', 'stolen_from']) expect(pub.Skills[0]).not.toHaveProperty(key);
+    expect(pub.Traits[0]).not.toHaveProperty('notes');
+    expect(pub.Traits[0]).not.toHaveProperty('notes_en');
+    expect(pub.Translations.some((r) => r.field === 'notes')).toBe(false);
+    // Everything else on the row is still there.
+    expect(pub.Skills[0]).toMatchObject({ id: 'ARC-01', name: 'Disparo Arcano' });
+    const alpha = visibleTables(t, 'alpha').tables;
+    expect(alpha.Skills[0]).toMatchObject({ notes: 'Ideia: mais forte no B2.', inspired_by: 'WWN', stolen_from: 'Outward' });
+    expect(alpha.Translations.some((r) => r.field === 'notes')).toBe(true);
+  });
+
   test('the input is left as it was', () => {
     const t = data();
     const before = structuredClone(t);

@@ -14,7 +14,7 @@
  *   - Values go in as typed values (stringValue, numberValue), never parsed, so text that
  *     starts with "=" stays text.
  */
-import { CONTENT_TYPES, englishKey, TABS, type ContentType, type Field, type LiveStatus, type Row, type TabName, type Tables } from '@wander/content';
+import { CONTENT_TYPES, englishKey, rowsFromValues, TABS, type ContentType, type Field, type LiveStatus, type Row, type TabName, type Tables } from '@wander/content';
 import { cellData, type CellInput, type CellValue, type Request, type SheetInfo, type SheetsTransport } from './transport.ts';
 
 /** A row as the Editor hands it over: column → value. Missing columns are left as they are. */
@@ -81,7 +81,7 @@ export class SheetsAdapter {
   async readAll(): Promise<Tables> {
     const tabs = Object.keys(TABS) as TabName[];
     const values = await this.transport.getValues(tabs);
-    return Object.fromEntries(tabs.map((tab, i) => [tab, toRows(values[i])])) as Tables;
+    return Object.fromEntries(tabs.map((tab, i) => [tab, rowsFromValues(values[i])])) as Tables;
   }
 
   private async grids(tabs: TabName[]): Promise<Map<TabName, Grid>> {
@@ -305,14 +305,6 @@ export class SheetsAdapter {
 }
 
 /* --- helpers --------------------------------------------------------------------- */
-
-function toRows(values: CellValue[][]): Row[] {
-  const [header = [], ...rows] = values;
-  const names = header.map((h) => String(h ?? '').trim());
-  return rows
-    .filter((row) => row.some((cell) => cell !== '' && cell !== null && cell !== false))
-    .map((row) => Object.fromEntries(names.filter(Boolean).map((name) => [name, row[names.indexOf(name)] ?? ''])));
-}
 
 const hasModifiers = (fields: readonly Field[]): boolean => fields.some((f) => f.type === 'modifiers' || (f.type === 'subtable' && hasModifiers(f.fields)));
 

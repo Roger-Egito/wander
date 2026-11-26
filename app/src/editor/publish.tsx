@@ -4,10 +4,9 @@
  * the -beta label while Wander is in playtest.
  */
 import { useEffect, useRef, useState } from 'react';
-import type { Tables } from '@wander/content';
+import { nextVersion, type Tables } from '@wander/content';
 import { useLanguage } from '@wander/ui';
 import { useEditorData } from './EditorData.tsx';
-import { nextVersion } from './keywordCandidates.ts';
 import styles from './editor.module.css';
 
 export function PublishButton({ tables }: { tables: Tables }) {
