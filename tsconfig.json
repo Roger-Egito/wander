@@ -19,5 +19,5 @@
     // vite/client types CSS modules and import.meta.glob for the app and the UI package.
     "types": ["node", "vite/client"]
   },
-  "include": ["packages/*/src", "tools/*/src", "supabase/test", "sheet-script/src", "sheet-script/vite.config.ts", "app/src", "app/vite.config.ts", "vitest.config.ts"]
+  "include": ["packages/*/src", "tools/*/src", "sheet-script/src", "sheet-script/vite.config.ts", "app/src", "app/vite.config.ts", "vitest.config.ts"]
 }

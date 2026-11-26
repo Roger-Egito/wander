@@ -11,8 +11,9 @@ until that changes.
 The game's content (skills, conditions, Facilidades e Complicações, keywords) lives in a
 Google Sheet, Wander Data. The Editor reads and writes it through the Sheets API, so the
 sheet stays the single source of truth and can still be edited by hand. Accounts and
-profiles live in Supabase. Players will only ever see published snapshots of the
-content.
+profiles live in Supabase, whose migrations are in
+[egito-backend](https://github.com/Roger-Egito/egito-backend). Players will only ever see
+published snapshots of the content.
 
 Every content type is declared once (`packages/content/src/types.ts`). The Editor's
 forms, the validation rules, the sheet's Validation tab formula and the TypeScript types
@@ -28,7 +29,6 @@ mostly one entry there.
 | `packages/ui` | React components: theme, language, cards, keyword popovers, skill tree |
 | `app` | The Vite app: Editor, gallery, Google sign-in, the Sheets adapter |
 | `sheet-script` | Apps Script bound to Wander Data: IDs for rows typed by hand, backups |
-| `supabase` | Database migrations and their tests |
 | `tools/migration` | The one-time import from the old character sheet spreadsheet |
 | `tools/snapshot` | Turns an .xlsx export of Wander Data into local data for development |
 
@@ -53,27 +53,10 @@ To work on the app with real content before signing in to Sheets, export Wander 
 
 ## One-time setup
 
-**Supabase.** Push the migrations with the Supabase CLI:
-
-```bash
-npx supabase login
-npx supabase link --project-ref <project-ref>
-npx supabase db push --remote
-```
-
-Admins see the Editor. Make an account admin in the Supabase SQL editor, after it has
-signed in once:
-
-```sql
-update public.profiles set is_admin = true where id = (select id from auth.users where email = '...');
-```
-
-The Alpha group also sees content marked `alpha`, published to a private Storage bucket.
-Add someone the same way:
-
-```sql
-update public.profiles set is_alpha = true where id = (select id from auth.users where email = '...');
-```
+**Supabase.** The database (profiles, the Alpha group's bucket and their Row Level
+Security) lives in [egito-backend](https://github.com/Roger-Egito/egito-backend), which
+Wander shares with my portfolio's admin panel. Its README covers pushing the migrations,
+making an account admin and adding someone to the Alpha group.
 
 **Sheet script.** Log in with `npx @google/clasp login`, turn on the Apps Script API in
 your Google account, then push with `npm run push -w sheet-script`. In the sheet, run

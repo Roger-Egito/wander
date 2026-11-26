@@ -6,7 +6,6 @@ tools/migration/output/
 .env
 app/dev-data/
 app/dist/
-supabase/.temp/
 sheet-script/dist/
 
 # Environment files. Secrets never go in the repo, only a template.

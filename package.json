@@ -7,7 +7,6 @@
     "packages/*",
     "tools/*",
     "app",
-    "supabase",
     "sheet-script"
   ],
   "scripts": {

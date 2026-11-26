@@ -4,7 +4,7 @@
  * The profile's language and theme follow the person between devices: when they sign
  * in, a saved choice is applied, and changing a toggle while signed in saves it. The
  * profile row comes from the profiles table, which Row Level Security limits to the
- * person's own row (supabase/migrations).
+ * person's own row (egito-backend's supabase/migrations).
  */
 import type { Session } from '@supabase/supabase-js';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
