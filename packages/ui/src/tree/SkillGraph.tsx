@@ -179,12 +179,13 @@ function Graph({ skills, renderCard = (skill) => <SkillCard skill={skill} />, fu
         <Background gap={24} />
         <Controls showInteractive={false} />
         <MiniMap pannable zoomable className={styles.minimap} />
+        {/* Before the button, so the button stays on top where the two meet. */}
+        {fullscreen && fullscreenTools && <Panel position="top-left" className={styles.toolsPanel}>{fullscreenTools}</Panel>}
         <Panel position="top-right">
           <button type="button" className={styles.panelButton} aria-pressed={fullscreen} onClick={() => setFullscreen((on) => !on)}>
             {t(fullscreen ? 'graph.exitFullscreen' : 'graph.fullscreen')}
           </button>
         </Panel>
-        {fullscreen && fullscreenTools && <Panel position="top-left" className={styles.toolsPanel}>{fullscreenTools}</Panel>}
       </ReactFlow>
     </div>
   );

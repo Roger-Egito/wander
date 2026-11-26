@@ -55,16 +55,17 @@
   font-weight: 600;
 }
 
-/* Leaves room for the full screen button on the right. */
+/*
+ * Top-aligned with the full screen button. The panel itself is see-through and lets
+ * touches through to the graph: only what the page puts in it has a background and
+ * takes taps.
+ */
 .toolsPanel {
-  max-width: min(480px, calc(100% - 220px));
-  max-height: calc(100% - 32px);
+  max-width: min(480px, calc(100% - 30px));
+  max-height: calc(100% - 30px);
   overflow: auto;
-  padding: 10px;
-  background: var(--color-raised);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
   color: var(--color-txt);
+  pointer-events: none;
 }
 
 /* On a phone the tools take the width, under the full screen button, and the map is small. */
@@ -74,8 +75,4 @@
     height: 72px;
   }
 
-  .toolsPanel {
-    max-width: calc(100% - 30px);
-    margin-top: 70px;
-  }
 }

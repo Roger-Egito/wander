@@ -48,13 +48,6 @@ export const skill = defineContentType({
     name,
     { key: 'discipline_id', type: 'reference', to: 'discipline', required: true, label: label('Disciplina', 'Discipline') },
     { key: 'level', type: 'number', integer: true, min: 1, required: true, label: label('Nível', 'Level') },
-    { key: 'categories', type: 'tags', options: { tab: 'Categories', column: 'name' }, label: label('Categorias', 'Categories') },
-    { key: 'cast_time', type: 'enum', options: { tab: 'CastTimes', column: 'name' }, label: label('Tempo de conjuração', 'Cast time') },
-    { key: 'cost_value', type: 'number', min: 0, label: label('Custo', 'Cost') },
-    { key: 'cost_unit', type: 'enum', options: COST_UNITS, label: label('Unidade do custo', 'Cost unit') },
-    { key: 'cost_scale', type: 'enum', options: { tab: 'CostScales', column: 'name' }, label: label('Custo por', 'Cost per') },
-    { key: 'cost2_value', type: 'number', min: 0, label: label('Segundo custo', 'Second cost') },
-    { key: 'cost2_unit', type: 'enum', options: COST_UNITS, label: label('Unidade do segundo custo', 'Second cost unit') },
     {
       key: 'stat_requirements', type: 'subtable', tab: 'StatRequirements', parentKey: 'skill_id',
       label: label('Requisitos de atributo', 'Stat requirements'),
@@ -74,6 +67,13 @@ export const skill = defineContentType({
         { key: 'required_categories', type: 'tags', options: { tab: 'Categories', column: 'name' }, label: label('Qualquer uma com as categorias', 'Any with the categories') },
       ],
     },
+    { key: 'categories', type: 'tags', options: { tab: 'Categories', column: 'name' }, label: label('Categorias', 'Categories') },
+    { key: 'cast_time', type: 'enum', options: { tab: 'CastTimes', column: 'name' }, label: label('Tempo de conjuração', 'Cast time') },
+    { key: 'cost_value', type: 'number', min: 0, label: label('Custo', 'Cost') },
+    { key: 'cost_unit', type: 'enum', options: COST_UNITS, label: label('Unidade do custo', 'Cost unit') },
+    { key: 'cost_scale', type: 'enum', options: { tab: 'CostScales', column: 'name' }, label: label('Custo por', 'Cost per') },
+    { key: 'cost2_value', type: 'number', min: 0, label: label('Segundo custo', 'Second cost') },
+    { key: 'cost2_unit', type: 'enum', options: COST_UNITS, label: label('Unidade do segundo custo', 'Second cost unit') },
     description(),
     { key: 'notes', type: 'richtext', label: label('Notas', 'Notes') },
     inspiredBy,
@@ -98,8 +98,8 @@ export const condition = defineContentType({
     name,
     description(),
     { key: 'rule_url', type: 'url', label: label('Link nas regras', 'Rules link') },
-    modifiers,
     status,
+    modifiers,
   ],
 });
 
@@ -112,6 +112,11 @@ export const trait = defineContentType({
   listColumns: ['source', 'status'],
   fields: [
     name,
+    { key: 'notes', type: 'richtext', translatable: true, label: label('Notas', 'Notes') },
+    inspiredBy,
+    stolenFrom,
+    source,
+    status,
     {
       key: 'levels', type: 'subtable', tab: 'TraitLevels', parentKey: 'trait_id', childIds: true,
       label: label('Níveis', 'Levels'),
@@ -132,11 +137,6 @@ export const trait = defineContentType({
         modifiers,
       ],
     },
-    { key: 'notes', type: 'richtext', translatable: true, label: label('Notas', 'Notes') },
-    inspiredBy,
-    stolenFrom,
-    source,
-    status,
   ],
 });
 

@@ -865,12 +865,28 @@
   gap: 6px;
   margin-top: 6px;
   min-width: min(300px, 100%);
+  padding: 10px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  justify-items: start;
+}
+
+.floatingFilters > .input,
+.floatingFilters > .filters {
+  justify-self: stretch;
 }
 
 .floatingTools {
   display: grid;
   gap: 8px;
   justify-items: start;
+  pointer-events: none;
+}
+
+/* The panel lets touches through; its button and cards take them. */
+.floatingTools > * {
+  pointer-events: auto;
 }
 
 .floatingTools > .bulk {
@@ -905,13 +921,9 @@
     gap: 4px;
   }
 
-  .floatingTools .linkButton,
-  .floatingTools .filterBox summary {
+  /* "Filtros" keeps the exit button's height, so the two line up and its card opens below both. */
+  .floatingTools .linkButton {
     min-height: 30px;
-  }
-
-  .floatingTools .filterBox summary {
-    padding: 0 10px;
   }
 
   .floatingTools .inline input {

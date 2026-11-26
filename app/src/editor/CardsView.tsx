@@ -7,7 +7,7 @@
  * the editing screen. The card itself doesn't react to taps, so reading, scrolling and
  * opening a keyword's popover never open the form or change the selection by accident.
  */
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ContentType, Problem, Tables } from '@wander/content';
 import { loadContent } from '@wander/rules';
 import { ContentProvider, useLanguage } from '@wander/ui';
@@ -75,7 +75,7 @@ export function useProblemCounts(problems: Problem[]) {
   }, [problems]);
 }
 
-export function CardsView(props: CardViewProps) {
+export const CardsView = memo(function CardsView(props: CardViewProps) {
   const { type, tables, problems, filters, checked, onChecked, notes, onOpen } = props;
   // Deleted rows load too, so the Trash shows as cards like everything else.
   const content = useMemo(() => loadContent(tables, { includeDeleted: true }), [tables]);
@@ -111,4 +111,4 @@ export function CardsView(props: CardViewProps) {
       </ContentProvider>
     </section>
   );
-}
+});

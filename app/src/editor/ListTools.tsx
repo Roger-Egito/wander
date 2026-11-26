@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import type { ContentType, Field, Tables } from '@wander/content';
 import { useLanguage } from '@wander/ui';
+import { Options } from './fields.tsx';
 import { optionsFor } from './options.ts';
 import { activeFilters, type Filters } from './filters.ts';
 import styles from './editor.module.css';
@@ -31,7 +32,7 @@ export function FilterSelects({ type, tables, filters, onFilters }: FilterProps)
   const select = (key: string, value: string, patch: (v: string) => Partial<Filters>, all: string) => (
     <select className={styles.input} value={value} onChange={(e) => set(patch(e.target.value))} aria-label={field(key).label[language]}>
       <option value="">{all}</option>
-      {(optionsFor(field(key), tables) ?? []).filter((o) => o.value !== 'deleted').map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      <Options options={(optionsFor(field(key), tables) ?? []).filter((o) => o.value !== 'deleted')} />
     </select>
   );
   return (

@@ -10,15 +10,33 @@ import { useLanguage } from '@wander/ui';
 import type { ChildRow, Children } from '../adapters/sheets/adapter.ts';
 import type { CellValue } from '../adapters/sheets/transport.ts';
 import { columnsOf, nextChildId } from './draft.ts';
-import { optionsFor, type Option } from './options.ts';
+import { groupRuns, optionsFor, type Option } from './options.ts';
 import styles from './editor.module.css';
 
 const text = (value: unknown) => (value === null || value === undefined ? '' : String(value));
 
-/** A long list of choices for type-ahead. Its options come from the cache, so it re-renders only after a new read of the sheet. */
+/**
+ * A long list of choices for type-ahead. Its options come from the cache, so it re-renders
+ * only after a new read of the sheet. A datalist can't show group headings, so each
+ * option starts with its group ("Nível 2 · ARC-05 · ...").
+ */
 const OptionList = memo(function OptionList({ id, options }: { id: string; options: Option[] }) {
-  return <datalist id={id}>{options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}</datalist>;
+  const { language } = useLanguage();
+  return <datalist id={id}>{options.map((o) => <option key={o.value} value={o.value}>{o.group ? `${o.group[language]} · ${o.label}` : o.label}</option>)}</datalist>;
 });
+
+/** The <option>s of a dropdown, under a heading per group when the options have groups. */
+export function Options({ options }: { options: Option[] }) {
+  const { language } = useLanguage();
+  return (
+    <>
+      {groupRuns(options).map((run, i) => {
+        const items = run.options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>);
+        return run.group ? <optgroup key={i} label={run.group[language]}>{items}</optgroup> : items;
+      })}
+    </>
+  );
+}
 
 /** A number input's value: a number when it reads as one, else the text (so validation can say why). */
 const toNumber = (raw: string): CellValue => (raw.trim() === '' ? '' : Number.isNaN(Number(raw.replace(',', '.'))) ? raw : Number(raw.replace(',', '.')));
@@ -62,7 +80,7 @@ export function FieldInput({ field, value, onChange, tables, problems = [], comp
     control = (
       <select id={id} className={styles.input} value={text(value)} onChange={(e) => onChange(e.target.value)}>
         <option value="">{field.required ? t('editor.choose') : '—'}</option>
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        <Options options={options} />
         {text(value) && !options.some((o) => o.value === text(value)) && <option value={text(value)}>{text(value)} (?)</option>}
       </select>
     );
@@ -111,7 +129,7 @@ function TagsInput({ id, value, options, onChange }: { id: string; value: string
       {options ? (
         <select id={id} className={styles.tagAdd} value="" onChange={(e) => e.target.value && set([...tags, e.target.value])}>
           <option value="">+ {t('editor.addRow')}</option>
-          {options.filter((o) => !tags.includes(o.value)).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <Options options={options.filter((o) => !tags.includes(o.value))} />
         </select>
       ) : (
         <input
@@ -204,7 +222,7 @@ export function ChildrenEditor({ fields, parentId, children, onChange, tables, p
 
 function ModifiersEditor({ rows, onChange, tables }: { rows: ChildRow[]; onChange: (rows: ChildRow[]) => void; tables: Tables }) {
   const { t } = useLanguage();
-  const stats = tables.Stats.map((s) => text(s.code)).filter(Boolean);
+  const stats = tables.Stats.map((s) => text(s.code)).filter(Boolean).sort((a, b) => a.localeCompare(b, 'pt'));
   const update = (i: number, row: ChildRow) => onChange(rows.map((r, j) => (j === i ? row : r)));
   return (
     <fieldset className={styles.subtable}>

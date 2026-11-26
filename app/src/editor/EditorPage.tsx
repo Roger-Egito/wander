@@ -7,7 +7,7 @@
  * Saving sends only what changed. The sheet is read again after each save, so what
  * the Editor shows is always what the sheet holds.
  */
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { Activity, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { englishKey, validate, type ContentType, type Field, type Problem, type Tables } from '@wander/content';
 import { loadContent } from '@wander/rules';
 import { ConditionCard, ContentProvider, KeywordCard, SkillCard, SkillTree, TraitCard, useLanguage } from '@wander/ui';
@@ -165,6 +165,8 @@ function Workspace({ tables }: { tables: Tables }) {
   const stableSelect = useStableCallback(select);
   const stableCreate = useStableCallback(create);
   const stableAfterBulk = useStableCallback((ids: string[], fresh: Tables | null, removed: boolean) => afterBulk(ids, fresh, removed));
+  const stableOpenFromCards = useStableCallback(openFromCards);
+  const stableCreateFromCards = useStableCallback(createFromCards);
 
   /** After a bulk action: the open row follows the sheet, or closes if it was deleted for good. */
   const afterBulk = (ids: string[], fresh: Tables | null, removed: boolean) => {
@@ -225,7 +227,17 @@ function Workspace({ tables }: { tables: Tables }) {
     };
   }, [save, changed]);
 
-  const cardProps = { type, tables, problems: allProblems, filters, onFilters: setFilters, checked, onChecked: setChecked, notes, onOpen: openFromCards, onCreate: createFromCards, onBulkDone: stableAfterBulk };
+  // One identity while typing in the form, so the hidden Cards and graph views (memo) don't redraw their cards.
+  const cardProps = useMemo(
+    () => ({ type, tables, problems: allProblems, filters, onFilters: setFilters, checked, onChecked: setChecked, notes, onOpen: stableOpenFromCards, onCreate: stableCreateFromCards, onBulkDone: stableAfterBulk }),
+    [type, tables, allProblems, filters, checked, notes, stableOpenFromCards, stableCreateFromCards, stableAfterBulk],
+  );
+  // The Cards view is drawn once, hidden, as soon as the Editor has its data (React draws
+  // hidden <Activity> content when it has nothing more urgent to do), and kept while
+  // hidden, so switching to it shows what's already drawn: 9 to 20 ms instead of 99 to
+  // 131 ms on desktop (2026-11-26). The graph gained nothing from this (React Flow
+  // restarts itself when shown again), so it's drawn when opened.
+  const cardsMode = screen === 'type' && shown === 'cards' ? 'visible' : 'hidden';
   const status = saveState.kind === 'saving' ? t('editor.saving') : saveState.kind === 'error' ? t('editor.error', { message: saveState.message }) : dirty ? t('editor.unsaved') : saveState.kind === 'saved' ? t('editor.saved') : '';
 
   return (
@@ -259,7 +271,8 @@ function Workspace({ tables }: { tables: Tables }) {
         </div>}
       </div>
 
-      {screen === 'translations' ? <TranslationScreen tables={tables} /> : shown === 'graph' ? <GraphView {...cardProps} /> : shown === 'cards' ? <CardsView {...cardProps} /> : <>
+      <Activity mode={cardsMode}><CardsView {...cardProps} /></Activity>
+      {screen === 'translations' ? <TranslationScreen tables={tables} /> : shown === 'graph' ? <GraphView {...cardProps} /> : shown !== 'list' ? null : <>
 
       <nav className={styles.paneTabs} aria-label="panes">
         {(['list', 'edit', 'preview'] as Pane[]).map((p) => (
@@ -387,7 +400,16 @@ function Form({ type, tables, draft, problems, onChange, isNew }: {
   collect(type.fields);
   const byColumn = (key: string) => problems.filter((p) => p.detail.split(' ')[0] === key).map((p) => p.detail);
   const general = problems.filter((p) => !columns.has(p.detail.split(' ')[0]));
-  const scalar = type.fields.filter((f) => f.type !== 'subtable' && f.type !== 'modifiers' && !f.system);
+  // Fields show in the content type's order. Plain fields in a row share a grid, and a
+  // child table (requirements, levels, modifiers) sits where the type puts it.
+  const runs: (Field | Field[])[] = [];
+  for (const field of type.fields) {
+    if (field.system) continue;
+    const last = runs[runs.length - 1];
+    if (field.type === 'subtable' || field.type === 'modifiers') runs.push(field);
+    else if (Array.isArray(last)) last.push(field);
+    else runs.push([field]);
+  }
 
   return (
     <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
@@ -403,15 +425,18 @@ function Form({ type, tables, draft, problems, onChange, isNew }: {
           {general.map((p, i) => <li key={i}>{p.problem}: {p.detail}</li>)}
         </ul>
       )}
-      <div className={styles.fields}>
-        {scalar.map((field) => (
-          <div key={field.key} className={field.type === 'richtext' ? styles.wide : undefined}>
-            <FieldInput field={field} value={draft.values[field.key] ?? ''} tables={tables} problems={byColumn(field.key)} onChange={(v) => set(field.key, v)} />
-            {field.translatable && <EnglishInput field={field} value={draft.values[englishKey(field)] ?? ''} auto={auto(field.key)} onChange={(v) => set(englishKey(field), v)} />}
-          </div>
-        ))}
-      </div>
-      <ChildrenEditor fields={type.fields} parentId={id} children={draft.children} tables={tables} problems={problems.map((p) => p.detail)} onChange={(children) => onChange({ ...draft, children })} />
+      {runs.map((run) => Array.isArray(run) ? (
+        <div key={run[0].key} className={styles.fields}>
+          {run.map((field) => (
+            <div key={field.key} className={field.type === 'richtext' ? styles.wide : undefined}>
+              <FieldInput field={field} value={draft.values[field.key] ?? ''} tables={tables} problems={byColumn(field.key)} onChange={(v) => set(field.key, v)} />
+              {field.translatable && <EnglishInput field={field} value={draft.values[englishKey(field)] ?? ''} auto={auto(field.key)} onChange={(v) => set(englishKey(field), v)} />}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ChildrenEditor key={run.key} fields={[run]} parentId={id} children={draft.children} tables={tables} problems={problems.map((p) => p.detail)} onChange={(children) => onChange({ ...draft, children })} />
+      ))}
     </form>
   );
 }
